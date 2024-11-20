@@ -42,7 +42,7 @@ exports.login = async (req, res) => {
 };
 
 // Update a user profile
-exports.updateProfile = async (req, res) => {
+exports.updateUser = async (req, res) => {
   const { id } = req.params;
   const { name, email, role } = req.body;
   try {
@@ -64,12 +64,57 @@ exports.updateProfile = async (req, res) => {
 };
 
 // Get all users
-exports.getAllUsers = async (req, res) => {
+exports.getUsers = async (req, res) => {
   try {
     const users = await User.find().select('-password');
     res.json(users);
   } catch (error) {
     console.error("Error fetching users:", error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+// Update a user profile (Partial update) (PATCH)
+exports.updateUser = async (req, res) => {
+  const { id } = req.params;
+  const { name, email, role } = req.body;
+
+  const updateFields = {};
+
+  if (name) updateFields.name = name;
+  if (email) updateFields.email = email;
+  if (role) updateFields.role = role;
+
+  try {
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      updateFields,
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({ message: 'User updated successfully', user: updatedUser });
+  } catch (error) {
+    console.error("Error updating user:", error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Delete a user
+exports.deleteUser = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const deletedUser = await User.findByIdAndDelete(id);
+
+    if (!deletedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error("Error deleting user:", error);
     res.status(500).json({ message: 'Server error' });
   }
 };
