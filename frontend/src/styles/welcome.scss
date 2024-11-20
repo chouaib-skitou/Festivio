@@ -14,7 +14,7 @@ body {
   font-family: 'Arial', sans-serif;
 }
 
-.login-container {
+.welcome-container {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -46,7 +46,8 @@ body {
     left: -100px;
   }
 
-  .login-form {
+  .welcome-message {
+    text-align: center;
     background-color: $card-background;
     padding: 2.5rem;
     border-radius: $border-radius;
@@ -58,54 +59,26 @@ body {
 
     h1 {
       color: $text-color;
-      font-size: 2rem;
+      font-size: 2.5rem;
       margin-bottom: 2rem;
-      text-align: center;
     }
 
-    .input-group {
-      margin-bottom: 1.5rem;
-
-      label {
-        display: block;
-        color: $text-color;
-        margin-bottom: 0.5rem;
-        font-size: 1rem;
-      }
-
-      input {
-        width: 100%;
-        padding: 0.75rem 1rem;
-        background-color: $input-background;
-        border: none;
-        border-radius: $border-radius;
-        color: $text-color;
-        font-size: 1rem;
-        transition: $transition;
-
-        &:focus {
-          outline: none;
-          box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
-        }
-
-        &::placeholder {
-          color: rgba(255, 255, 255, 0.5);
-        }
-      }
+    p {
+      color: $text-color;
+      font-size: 1.2rem;
+      margin-bottom: 2rem;
     }
 
-    .submit-btn {
-      width: 100%;
-      padding: 0.75rem;
+    .explore-btn {
+      padding: 1rem 2rem;
       background-color: $button-background;
       color: $button-text;
       border: none;
       border-radius: $border-radius;
-      font-size: 1rem;
-      font-weight: 600;
+      font-size: 1.2rem;
       cursor: pointer;
       transition: $transition;
-      margin-bottom: 1.5rem;
+      margin-top: 1.5rem;
 
       &:hover {
         transform: translateY(-2px);
@@ -113,48 +86,25 @@ body {
       }
     }
 
-    .social-login {
+    .auth-links {
       display: flex;
-      gap: 1rem;
       justify-content: center;
-      margin-top: 1.5rem;
+      gap: 1.5rem;
+      margin-top: 2rem;
 
-      button {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.75rem 1.5rem;
-        background-color: $input-background;
+      .auth-btn {
+        padding: 0.75rem 2rem;
+        background-color: $button-background;
+        color: $button-text;
         border: none;
         border-radius: $border-radius;
-        color: $text-color;
-        font-size: 0.9rem;
+        font-size: 1rem;
         cursor: pointer;
         transition: $transition;
 
         &:hover {
-          background-color: lighten($input-background, 5%);
-        }
-
-        img {
-          width: 20px;
-          height: 20px;
-        }
-      }
-    }
-
-    .forgot-password {
-      text-align: center;
-      margin-top: 1rem;
-
-      a {
-        color: rgba(255, 255, 255, 0.6);
-        text-decoration: none;
-        font-size: 0.9rem;
-        transition: $transition;
-
-        &:hover {
-          color: $text-color;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
         }
       }
     }

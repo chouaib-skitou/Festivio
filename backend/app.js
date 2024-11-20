@@ -7,6 +7,7 @@ const eventRoutes = require('./routes/eventRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
+const cors = require('cors'); 
 
 dotenv.config({ path: '.env.local' });
 connectDB();
@@ -15,6 +16,15 @@ const app = express();
 
 // Middleware
 app.use(express.json());
+
+// Configuration de CORS
+app.use(
+  cors({
+    origin: '*', // Autorise toutes les origines
+    methods: '*', // Autorise toutes les méthodes HTTP
+    allowedHeaders: ['Content-Type', 'Authorization'], // Headers autorisés
+  })
+);
 
 // Swagger setup
 const swaggerOptions = {

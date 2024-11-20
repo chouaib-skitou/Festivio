@@ -2,8 +2,9 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuthStore from "../store/authStore";
 import { loginSchema } from "../validationSchemas/loginSchema";
+import axios from "axios"; // Import Axios
 import { z } from "zod";
-import '../styles/login.scss';  // Assurez-vous que le chemin du fichier SCSS est correct
+import '../styles/login.scss'; // Ensure the SCSS file path is correct
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
@@ -19,42 +20,39 @@ const LoginPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validation avec Zod
+    // Validation using Zod
     try {
       loginSchema.parse(formData);
-      setErrors({}); // Réinitialise les erreurs si la validation passe
+      setErrors({}); // Reset errors if validation passes
 
-      // Exemple de requête API (remplacez par votre logique réelle)
-      const response = await fetch("http://localhost:5000/api/auth/login", {
-        method: "POST",
+      // Axios API request
+      const { data } = await axios.post("http://localhost:5000/api/auth/login", formData, {
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
       });
-      if (!response.ok) throw new Error("Invalid credentials");
 
-      const data = await response.json();
-      setUser(data.user); // Mettre à jour l'utilisateur connecté
-      localStorage.setItem("accessToken", data.accessToken); // Optionnel : stocker le token
+      setUser(data.user); // Update the connected user
+      localStorage.setItem("accessToken", data.accessToken); // Optional: store the token
       localStorage.setItem("refreshToken", data.refreshToken);
       console.log(data);
-      navigate("/dashboard"); // Redirige vers le tableau de bord
+      navigate("/dashboard"); // Redirect to the dashboard
     } catch (err) {
       if (err instanceof z.ZodError) {
-        // Affiche les erreurs de validation Zod
+        // Display Zod validation errors
         setErrors(err.errors.reduce((acc, cur) => ({ ...acc, [cur.path[0]]: cur.message }), {}));
+      } else if (err.response) {
+        // Handle Axios server error
+        alert(`Server error: ${err.response.data.message || "Invalid credentials"}`);
       } else {
-        alert("Erreur : " + err.message); // Erreur serveur ou autre
+        // Handle other errors
+        alert(`Error: ${err.message}`);
       }
     }
   };
 
   return (
     <div className="login-container">
-      <form
-        onSubmit={handleSubmit}
-        className="login-form"
-      >
-        <h1>Connexion</h1>
+      <form onSubmit={handleSubmit} className="login-form">
+        <h1>Log in</h1>
         <div className="input-group">
           <label htmlFor="email">Email</label>
           <input
@@ -64,9 +62,7 @@ const LoginPage = () => {
             value={formData.email}
             onChange={handleInputChange}
           />
-          {errors.email && (
-            <p className="error-message">{errors.email}</p>
-          )}
+          {errors.email && <p className="error-message">{errors.email}</p>}
         </div>
         <div className="input-group">
           <label htmlFor="password">Password</label>
@@ -77,22 +73,17 @@ const LoginPage = () => {
             value={formData.password}
             onChange={handleInputChange}
           />
-          {errors.password && (
-            <p className="error-message">{errors.password}</p>
-          )}
+          {errors.password && <p className="error-message">{errors.password}</p>}
         </div>
-        <button
-          type="submit"
-          className="submit-btn"
-        >
-          Se connecter
+        <button type="submit" className="submit-btn">
+          Log in
         </button>
 
         <div className="forgot-password">
-          <a href="/forgot-password">Forgot password ?</a>
+          <a href="/forgot-password">Forgot password?</a>
         </div>
         <div className="forgot-password">
-          <a href="/registration">registration</a>
+          <a href="/registration">Register now</a>
         </div>
       </form>
     </div>

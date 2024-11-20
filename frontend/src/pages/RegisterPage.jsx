@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuthStore from "../store/authStore";
-import { registerSchema } from "../validationSchemas/registerSchema"; // Assurez-vous que ce schéma Zod est créé
+import { registerSchema } from "../validationSchemas/registerSchema"; // Make sure this Zod schema is created
+import axios from "axios"; // Import Axios
 import { z } from "zod";
-import '../styles/login.scss'; // Vous pouvez utiliser le même fichier SCSS si nécessaire
+import '../styles/login.scss'; // You can use the same SCSS file if needed
 
 const RegisterPage = () => {
-  const [formData, setFormData] = useState({ email: "", username: "", password: "" });
+  const [formData, setFormData] = useState({ email: "", username: "", password: "", confirmPassword: "" });
   const [errors, setErrors] = useState({});
   const setUser = useAuthStore((state) => state.setUser);
   const navigate = useNavigate();
@@ -19,32 +20,37 @@ const RegisterPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validation avec Zod
+    // Manual check for password confirmation
+    if (formData.password !== formData.confirmPassword) {
+      setErrors({ confirmPassword: "Passwords do not match" });
+      return;
+    }
+
+    // Validation using Zod
     try {
       registerSchema.parse(formData);
-      setErrors({}); // Réinitialise les erreurs si la validation passe
+      setErrors({}); // Reset errors if validation passes
 
-      // Requête API pour enregistrer un nouvel utilisateur
-      const response = await fetch("http://localhost:5000/api/auth/register", {
-        method: "POST",
+      // API request to register a new user using Axios
+      const { data } = await axios.post("http://localhost:5000/api/auth/register", formData, {
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
       });
 
-      if (!response.ok) throw new Error("Erreur lors de l'inscription");
-
-      const data = await response.json();
-      setUser(data.user); // Met à jour l'utilisateur après inscription
-      localStorage.setItem("accessToken", data.accessToken); // Optionnel : stocker le token
+      setUser(data.user); // Update user after registration
+      localStorage.setItem("accessToken", data.accessToken); // Optional: store the token
       localStorage.setItem("refreshToken", data.refreshToken);
       console.log(data);
-      navigate("/dashboard"); // Redirige vers le tableau de bord après inscription
+      navigate("/login"); // Redirect to the homepage after registration
     } catch (err) {
       if (err instanceof z.ZodError) {
-        // Affiche les erreurs de validation Zod
+        // Display Zod validation errors
         setErrors(err.errors.reduce((acc, cur) => ({ ...acc, [cur.path[0]]: cur.message }), {}));
+      } else if (err.response) {
+        // Handle server errors with Axios
+        alert(`Server error: ${err.response.data.message || "Registration failed"}`);
       } else {
-        alert("Erreur : " + err.message); // Erreur serveur ou autre
+        // Handle other errors
+        alert(`Error: ${err.message}`);
       }
     }
   };
@@ -52,10 +58,10 @@ const RegisterPage = () => {
   return (
     <div className="login-container">
       <form onSubmit={handleSubmit} className="login-form">
-        <h1>Inscription</h1>
+        <h1>Register</h1>
 
         <div className="input-group">
-          <label htmlFor="username">Nom d'utilisateur</label>
+          <label htmlFor="username">User name</label>
           <input
             type="text"
             name="username"
@@ -79,7 +85,7 @@ const RegisterPage = () => {
         </div>
 
         <div className="input-group">
-          <label htmlFor="password">Mot de passe</label>
+          <label htmlFor="password">Password</label>
           <input
             type="password"
             name="password"
@@ -90,12 +96,24 @@ const RegisterPage = () => {
           {errors.password && <p className="error-message">{errors.password}</p>}
         </div>
 
+        <div className="input-group">
+          <label htmlFor="confirmPassword">Confirm Password</label>
+          <input
+            type="password"
+            name="confirmPassword"
+            id="confirmPassword"
+            value={formData.confirmPassword}
+            onChange={handleInputChange}
+          />
+          {errors.confirmPassword && <p className="error-message">{errors.confirmPassword}</p>}
+        </div>
+
         <button type="submit" className="submit-btn">
-          S'inscrire
+          Register
         </button>
 
         <div className="forgot-password">
-          <a href="/login">Déjà un compte ? Connectez-vous</a>
+          <a href="/login">Already have an account? Log in</a>
         </div>
       </form>
     </div>
