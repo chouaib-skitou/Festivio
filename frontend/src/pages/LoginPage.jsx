@@ -1,9 +1,9 @@
+// src/pages/LoginPage.js
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuthStore from "../store/authStore";
-import { loginSchema } from "../validationSchemas/loginSchema";
-import axios from "axios"; // Import Axios
-import { z } from "zod";
+import { loginUser } from "../api/UserAPI"; // Utilise l'import nommé
 import '../styles/login.scss'; // Ensure the SCSS file path is correct
 
 const LoginPage = () => {
@@ -19,34 +19,8 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Validation using Zod
-    try {
-      loginSchema.parse(formData);
-      setErrors({}); // Reset errors if validation passes
-
-      // Axios API request
-      const { data } = await axios.post("http://localhost:5000/api/auth/login", formData, {
-        headers: { "Content-Type": "application/json" },
-      });
-
-      setUser(data.user); // Update the connected user
-      localStorage.setItem("accessToken", data.accessToken); // Optional: store the token
-      localStorage.setItem("refreshToken", data.refreshToken);
-      console.log(data);
-      navigate("/dashboard"); // Redirect to the dashboard
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        // Display Zod validation errors
-        setErrors(err.errors.reduce((acc, cur) => ({ ...acc, [cur.path[0]]: cur.message }), {}));
-      } else if (err.response) {
-        // Handle Axios server error
-        alert(`Server error: ${err.response.data.message || "Invalid credentials"}`);
-      } else {
-        // Handle other errors
-        alert(`Error: ${err.message}`);
-      }
-    }
+    // Appel à la fonction loginUser pour gérer la connexion
+    loginUser(formData, setErrors, setUser, navigate);
   };
 
   return (

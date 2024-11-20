@@ -1,10 +1,10 @@
+// src/pages/RegisterPage.js
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useAuthStore from "../store/authStore";
-import { registerSchema } from "../validationSchemas/registerSchema"; // Make sure this Zod schema is created
-import axios from "axios"; // Import Axios
-import { z } from "zod";
-import '../styles/login.scss'; // You can use the same SCSS file if needed
+import { registerUser } from "../api/UserAPI"; // Import de la fonction registerUser
+import '../styles/login.scss'; // Tu peux utiliser le même fichier SCSS si nécessaire
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({ email: "", username: "", password: "", confirmPassword: "" });
@@ -19,40 +19,8 @@ const RegisterPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Manual check for password confirmation
-    if (formData.password !== formData.confirmPassword) {
-      setErrors({ confirmPassword: "Passwords do not match" });
-      return;
-    }
-
-    // Validation using Zod
-    try {
-      registerSchema.parse(formData);
-      setErrors({}); // Reset errors if validation passes
-
-      // API request to register a new user using Axios
-      const { data } = await axios.post("http://localhost:5000/api/auth/register", formData, {
-        headers: { "Content-Type": "application/json" },
-      });
-
-      setUser(data.user); // Update user after registration
-      localStorage.setItem("accessToken", data.accessToken); // Optional: store the token
-      localStorage.setItem("refreshToken", data.refreshToken);
-      console.log(data);
-      navigate("/login"); // Redirect to the homepage after registration
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        // Display Zod validation errors
-        setErrors(err.errors.reduce((acc, cur) => ({ ...acc, [cur.path[0]]: cur.message }), {}));
-      } else if (err.response) {
-        // Handle server errors with Axios
-        alert(`Server error: ${err.response.data.message || "Registration failed"}`);
-      } else {
-        // Handle other errors
-        alert(`Error: ${err.message}`);
-      }
-    }
+    // Appel à la fonction registerUser pour gérer l'inscription
+    registerUser(formData, setErrors, setUser, navigate);
   };
 
   return (
