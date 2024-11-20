@@ -3,7 +3,7 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 
 // Register a new user
-exports.register = async (req, res) => {
+exports.addUser = async (req, res) => {
   const { name, email, password, role } = req.body;
   try {
     // Check if user already exists
@@ -123,5 +123,25 @@ exports.deleteUser = async (req, res) => {
   } catch (error) {
     console.error("Error deleting user:", error);
     res.status(500).json({ message: "Server error" });
+  }
+};
+exports.patchUser = async (req, res) => {
+  const { id } = req.params;
+  const updateFields = req.body; // Assume body only includes fields to update
+
+  try {
+      const updatedUser = await User.findByIdAndUpdate(id, updateFields, {
+          new: true,
+          runValidators: true,
+      });
+
+      if (!updatedUser) {
+          return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json({ message: "User profile updated successfully", user: updatedUser });
+  } catch (error) {
+      console.error("Error partially updating user:", error);
+      res.status(500).json({ message: "Server error" });
   }
 };
