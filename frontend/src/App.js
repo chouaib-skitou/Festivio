@@ -4,7 +4,7 @@ import LoginPage from "./pages/LoginPage";
 import Dashboard from "./pages/Dashboard"; // Exemple de redirection après login
 import RegisterPage from "./pages/RegisterPage";
 import HomePage from "./pages/HomePage";
-import PrivateRoute from "./components/PrivateRoute"; // Importez le composant PrivateRoute
+import PrivateRoute from "./routes/PrivateRoutes/PrivateRoute"; // Importez le composant PrivateRoute
 
 const App = () => (
   <Router>

@@ -1,4 +1,3 @@
-
 $background-color: #0f0f13;
 $card-background: #1a1a1f;
 $text-color: #ffffff;
@@ -16,8 +15,8 @@ body {
 
 .login-container {
   display: flex;
-  justify-content: center;
-  align-items: center;
+  justify-content: center; /* Centre horizontalement */
+  align-items: center; /* Centre verticalement */
   min-height: 100vh;
   background-color: $background-color;
   position: relative;
@@ -51,10 +50,13 @@ body {
     padding: 2.5rem;
     border-radius: $border-radius;
     width: 100%;
-    max-width: 400px;
+    max-width: 350px; /* Raccourcir la largeur du formulaire */
     position: relative;
     z-index: 1;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column; /* Affichage en colonne */
+    align-items: center; /* Centrage des éléments horizontalement */
 
     h1 {
       color: $text-color;
@@ -65,7 +67,8 @@ body {
 
     .input-group {
       margin-bottom: 1.5rem;
-
+      width: 100%; /* S'assure que les champs de saisie prennent toute la largeur disponible */
+      
       label {
         display: block;
         color: $text-color;
@@ -74,7 +77,8 @@ body {
       }
 
       input {
-        width: 100%;
+        width: 100%; /* Raccourcir la largeur de l'input */
+        max-width: 300px; /* Limite la largeur des champs de saisie */
         padding: 0.75rem 1rem;
         background-color: $input-background;
         border: none;
@@ -82,6 +86,7 @@ body {
         color: $text-color;
         font-size: 1rem;
         transition: $transition;
+        margin-top: 0.25rem;
 
         &:focus {
           outline: none;
@@ -96,6 +101,7 @@ body {
 
     .submit-btn {
       width: 100%;
+      max-width: 300px; /* Raccourcir la largeur du bouton */
       padding: 0.75rem;
       background-color: $button-background;
       color: $button-text;
@@ -113,36 +119,6 @@ body {
       }
     }
 
-    .social-login {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-      margin-top: 1.5rem;
-
-      button {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.75rem 1.5rem;
-        background-color: $input-background;
-        border: none;
-        border-radius: $border-radius;
-        color: $text-color;
-        font-size: 0.9rem;
-        cursor: pointer;
-        transition: $transition;
-
-        &:hover {
-          background-color: lighten($input-background, 5%);
-        }
-
-        img {
-          width: 20px;
-          height: 20px;
-        }
-      }
-    }
-
     .forgot-password {
       text-align: center;
       margin-top: 1rem;
@@ -156,6 +132,10 @@ body {
         &:hover {
           color: $text-color;
         }
+      }
+
+      &:nth-child(2) {
+        margin-top: 0.5rem;
       }
     }
   }
