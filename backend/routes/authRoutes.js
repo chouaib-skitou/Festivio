@@ -1,5 +1,10 @@
 const express = require('express');
-const { register, login, refreshToken, verifyEmail } = require('../controllers/authController'); // Import verifyEmail
+const {
+  register,
+  login,
+  refreshToken,
+  verifyEmail,
+} = require('../controllers/authController'); // Import verifyEmail
 const { check } = require('express-validator');
 
 const router = express.Router();
@@ -32,11 +37,17 @@ const router = express.Router();
  *       500:
  *         description: Internal server error
  */
-router.post('/register', [
-  check('username', 'Username is required').not().isEmpty(),
-  check('email', 'Please include a valid email').isEmail(),
-  check('password', 'Password must be 6 or more characters').isLength({ min: 6 })
-], register);
+router.post(
+  '/register',
+  [
+    check('username', 'Username is required').not().isEmpty(),
+    check('email', 'Please include a valid email').isEmail(),
+    check('password', 'Password must be 6 or more characters').isLength({
+      min: 6,
+    }),
+  ],
+  register
+);
 
 /**
  * @swagger
@@ -64,10 +75,14 @@ router.post('/register', [
  *       500:
  *         description: Internal server error
  */
-router.post('/login', [
-  check('email', 'Please include a valid email').isEmail(),
-  check('password', 'Password is required').exists()
-], login);
+router.post(
+  '/login',
+  [
+    check('email', 'Please include a valid email').isEmail(),
+    check('password', 'Password is required').exists(),
+  ],
+  login
+);
 
 /**
  * @swagger

@@ -1,0 +1,13 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "files": ["**/*.js", "**/*.json", "**/*.md"],
+  "ignorePaths": ["**/node_modules/**", "**/dist/**", "**/build/**"],
+  "dictionaries": ["dtos", "DTOs"],
+  "dictionaryDefinitions": [
+    {
+      "name": "dtos",
+      "words": ["dtos", "DTOs"]
+    }
+  ]
+}

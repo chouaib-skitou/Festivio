@@ -14,12 +14,20 @@ exports.register = async (req, res) => {
 
     // Hash password and create user
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ name, email, password: hashedPassword, role });
+    const newUser = new User({
+      name,
+      email,
+      password: hashedPassword,
+      role,
+    });
     await newUser.save();
 
-    res.status(201).json({ message: 'User registered successfully', user: newUser });
+    res.status(201).json({
+      message: 'User registered successfully',
+      user: newUser,
+    });
   } catch (error) {
-    console.error("Error registering user:", error);
+    console.error('Error registering user:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -36,7 +44,7 @@ exports.login = async (req, res) => {
     // Normally, you’d generate a JWT token here
     res.json({ message: 'Login successful', user });
   } catch (error) {
-    console.error("Error logging in user:", error);
+    console.error('Error logging in user:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -58,7 +66,7 @@ exports.updateUser = async (req, res) => {
 
     res.json({ message: 'User updated successfully', user: updatedUser });
   } catch (error) {
-    console.error("Error updating profile:", error);
+    console.error('Error updating profile:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -69,7 +77,7 @@ exports.getUsers = async (req, res) => {
     const users = await User.find().select('-password');
     res.json(users);
   } catch (error) {
-    console.error("Error fetching users:", error);
+    console.error('Error fetching users:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -85,11 +93,10 @@ exports.updateUser = async (req, res) => {
   if (role) updateFields.role = role;
 
   try {
-    const updatedUser = await User.findByIdAndUpdate(
-      id,
-      updateFields,
-      { new: true, runValidators: true }
-    );
+    const updatedUser = await User.findByIdAndUpdate(id, updateFields, {
+      new: true,
+      runValidators: true,
+    });
 
     if (!updatedUser) {
       return res.status(404).json({ message: 'User not found' });
@@ -97,7 +104,7 @@ exports.updateUser = async (req, res) => {
 
     res.json({ message: 'User updated successfully', user: updatedUser });
   } catch (error) {
-    console.error("Error updating user:", error);
+    console.error('Error updating user:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
@@ -114,7 +121,7 @@ exports.deleteUser = async (req, res) => {
 
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
-    console.error("Error deleting user:", error);
+    console.error('Error deleting user:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };

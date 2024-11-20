@@ -34,7 +34,9 @@ exports.createEvent = async (req, res) => {
 // Get events
 exports.getEvents = async (req, res) => {
   try {
-    const events = await Event.find({ organizer: req.user._id }).populate('participants tasks');
+    const events = await Event.find({ organizer: req.user._id }).populate(
+      'participants tasks'
+    );
     const eventDTOs = events.map((event) => new EventDTO(event));
 
     res.status(200).json({ events: eventDTOs });

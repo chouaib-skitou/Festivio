@@ -26,13 +26,16 @@ const sendEmail = async (to, subject, html) => {
     },
   });
 
-  await transporter.sendMail({ from: process.env.EMAIL_USER, to, subject, html });
+  await transporter.sendMail({
+    from: process.env.EMAIL_USER,
+    to,
+    subject,
+    html,
+  });
 };
 
 // Register User
 exports.register = async (req, res) => {
-  
-
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     console.log('Validation errors:', errors.array());
@@ -47,7 +50,8 @@ exports.register = async (req, res) => {
     if (existingUser) {
       if (!existingUser.isVerified) {
         return res.status(400).json({
-          message: 'User already exists but email is not verified. Please verify your email.',
+          message:
+            'User already exists but email is not verified. Please verify your email.',
         });
       }
       return res.status(400).json({ message: 'User already exists.' });
@@ -83,14 +87,15 @@ exports.register = async (req, res) => {
     );
 
     res.status(201).json({
-      message: 'Registration successful. Please check your email to verify your account.',
+      message:
+        'Registration successful. Please check your email to verify your account.',
     });
-  } catch (err) { // Ensure "err" is used here
+  } catch (err) {
+    // Ensure "err" is used here
     console.error('Registration error:', err);
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
-
 
 // Verify Email
 exports.verifyEmail = async (req, res) => {
@@ -138,12 +143,15 @@ exports.login = async (req, res) => {
     if (!user) return res.status(400).json({ message: 'Invalid credentials' });
 
     if (!user.isVerified) {
-      return res.status(401).json({ message: 'Please verify your email before logging in.' });
+      return res.status(401).json({
+        message: 'Please verify your email before logging in.',
+      });
     }
 
     // Compare password
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
+    if (!isMatch)
+      return res.status(400).json({ message: 'Invalid credentials' });
 
     // Generate tokens
     const accessToken = generateAccessToken(user._id);
@@ -159,7 +167,8 @@ exports.login = async (req, res) => {
 // Refresh Token
 exports.refreshToken = (req, res) => {
   const { refreshToken } = req.body;
-  if (!refreshToken) return res.status(401).json({ message: 'Refresh token required' });
+  if (!refreshToken)
+    return res.status(401).json({ message: 'Refresh token required' });
 
   jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, (err, decoded) => {
     if (err) return res.status(403).json({ message: 'Invalid refresh token' });

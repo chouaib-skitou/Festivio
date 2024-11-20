@@ -98,7 +98,6 @@ router.post('/', authMiddleware, createTask);
  */
 router.get('/', authMiddleware, getAllTasks);
 
-
 /**
  * @swagger
  * /api/tasks/{id}:
