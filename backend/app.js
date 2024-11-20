@@ -1,14 +1,14 @@
-const express = require('express');
-const dotenv = require('dotenv');
-const connectDB = require('./config/db');
-const authRoutes = require('./routes/authRoutes');
-const userRoutes = require('./routes/userRoutes');
-const eventRoutes = require('./routes/eventRoutes');
-const taskRoutes = require('./routes/taskRoutes');
-const swaggerJsDoc = require('swagger-jsdoc');
-const swaggerUi = require('swagger-ui-express');
+const express = require("express");
+const dotenv = require("dotenv");
+const connectDB = require("./config/db");
+const authRoutes = require("./routes/authRoutes");
+const userRoutes = require("./routes/userRoutes");
+const eventRoutes = require("./routes/eventRoutes");
+const taskRoutes = require("./routes/taskRoutes");
+const swaggerJsDoc = require("swagger-jsdoc");
+const swaggerUi = require("swagger-ui-express");
 
-dotenv.config({ path: '.env.local' });
+dotenv.config({ path: ".env.local" });
 connectDB();
 
 const app = express();
@@ -19,23 +19,23 @@ app.use(express.json());
 // Swagger setup
 const swaggerOptions = {
   definition: {
-    openapi: '3.0.0',
+    openapi: "3.0.0",
     info: {
-      title: 'Rest API Documentation',
-      version: '1.0.0',
-      description: 'API documentation for the Rest API project',
+      title: "Rest API Documentation",
+      version: "1.0.0",
+      description: "API documentation for the Rest API project",
     },
     servers: [
       {
-        url: 'http://localhost:5000/api',
+        url: "http://localhost:5000/api",
       },
     ],
     components: {
       securitySchemes: {
         bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
         },
       },
     },
@@ -45,21 +45,21 @@ const swaggerOptions = {
       },
     ],
   },
-  apis: ['./routes/*.js'], // Path to the API docs (make sure it's correct)
+  apis: ["./routes/*.js"], // Path to the API docs (make sure it's correct)
 };
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/events', eventRoutes);
-app.use('/api/tasks', taskRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/events", eventRoutes);
+app.use("/api/tasks", taskRoutes);
 
 // Test Route
-app.get('/', (req, res) => {
-  res.send('Server is running');
+app.get("/", (req, res) => {
+  res.send("Server is running");
 });
 
 module.exports = app;

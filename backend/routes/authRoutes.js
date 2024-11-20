@@ -1,11 +1,11 @@
-const express = require('express');
+const express = require("express");
 const {
   register,
   login,
   refreshToken,
   verifyEmail,
-} = require('../controllers/authController'); // Import verifyEmail
-const { check } = require('express-validator');
+} = require("../controllers/authController"); // Import verifyEmail
+const { check } = require("express-validator");
 
 const router = express.Router();
 
@@ -38,11 +38,11 @@ const router = express.Router();
  *         description: Internal server error
  */
 router.post(
-  '/register',
+  "/register",
   [
-    check('username', 'Username is required').not().isEmpty(),
-    check('email', 'Please include a valid email').isEmail(),
-    check('password', 'Password must be 6 or more characters').isLength({
+    check("username", "Username is required").not().isEmpty(),
+    check("email", "Please include a valid email").isEmail(),
+    check("password", "Password must be 6 or more characters").isLength({
       min: 6,
     }),
   ],
@@ -76,10 +76,10 @@ router.post(
  *         description: Internal server error
  */
 router.post(
-  '/login',
+  "/login",
   [
-    check('email', 'Please include a valid email').isEmail(),
-    check('password', 'Password is required').exists(),
+    check("email", "Please include a valid email").isEmail(),
+    check("password", "Password is required").exists(),
   ],
   login
 );
@@ -110,7 +110,7 @@ router.post(
  *       500:
  *         description: Internal server error
  */
-router.post('/refresh-token', refreshToken);
+router.post("/refresh-token", refreshToken);
 
 /**
  * @swagger
@@ -140,6 +140,6 @@ router.post('/refresh-token', refreshToken);
  *       404:
  *         description: User not found
  */
-router.get('/verify-email/:userId/:token', verifyEmail);
+router.get("/verify-email/:userId/:token", verifyEmail);
 
 module.exports = router;

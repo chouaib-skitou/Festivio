@@ -1,6 +1,6 @@
 // controllers/taskController.js
-const Task = require('../models/Task');
-const TaskDTO = require('../dtos/TaskDTO');
+const Task = require("../models/Task");
+const TaskDTO = require("../dtos/TaskDTO");
 
 // Create a task
 exports.createTask = async (req, res) => {
@@ -19,11 +19,11 @@ exports.createTask = async (req, res) => {
     await task.save();
 
     res.status(201).json({
-      message: 'Task created successfully',
+      message: "Task created successfully",
       task: new TaskDTO(task),
     });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
@@ -35,7 +35,7 @@ exports.getAllTasks = async (req, res) => {
 
     res.status(200).json({ tasks: taskDTOs });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
@@ -47,15 +47,15 @@ exports.updateTask = async (req, res) => {
 
     const task = await Task.findByIdAndUpdate(id, updates, { new: true });
     if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
+      return res.status(404).json({ message: "Task not found" });
     }
 
     res.status(200).json({
-      message: 'Task updated successfully',
+      message: "Task updated successfully",
       task: new TaskDTO(task),
     });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
@@ -66,12 +66,12 @@ exports.deleteTask = async (req, res) => {
 
     const task = await Task.findByIdAndDelete(id);
     if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
+      return res.status(404).json({ message: "Task not found" });
     }
 
-    res.status(200).json({ message: 'Task deleted successfully' });
+    res.status(200).json({ message: "Task deleted successfully" });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
@@ -83,14 +83,14 @@ exports.patchTask = async (req, res) => {
 
     const task = await Task.findByIdAndUpdate(id, updates, { new: true });
     if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
+      return res.status(404).json({ message: "Task not found" });
     }
 
     res.status(200).json({
-      message: 'Task updated successfully',
+      message: "Task updated successfully",
       task: new TaskDTO(task),
     });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };

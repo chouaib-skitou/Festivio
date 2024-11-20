@@ -1,5 +1,5 @@
 // models/Event.js
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const eventSchema = new mongoose.Schema(
   {
@@ -8,13 +8,13 @@ const eventSchema = new mongoose.Schema(
     date: { type: Date, required: true },
     organizer: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
     },
-    participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-    tasks: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Task' }],
+    participants: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    tasks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Task" }],
   },
   { timestamps: true }
 );
 
-module.exports = mongoose.model('Event', eventSchema);
+module.exports = mongoose.model("Event", eventSchema);

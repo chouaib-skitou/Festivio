@@ -1,6 +1,6 @@
 // models/User.js
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
 
 const userSchema = new mongoose.Schema(
   {
@@ -9,12 +9,12 @@ const userSchema = new mongoose.Schema(
     password: { type: String, required: true },
     role: {
       type: String,
-      enum: ['Organizer', 'Participant'],
+      enum: ["Organizer", "Participant"],
       required: false,
     },
     isVerified: { type: Boolean, default: false }, // New field
-    events: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Event' }], // Events the user is part of
-    tasks: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Task' }], // Tasks assigned to the user
+    events: [{ type: mongoose.Schema.Types.ObjectId, ref: "Event" }], // Events the user is part of
+    tasks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Task" }], // Tasks assigned to the user
   },
   { timestamps: true }
 );
@@ -31,7 +31,7 @@ userSchema.statics.login = async function (email, password) {
   if (user && (await bcrypt.compare(password, user.password))) {
     return user;
   }
-  throw new Error('Invalid email or password');
+  throw new Error("Invalid email or password");
 };
 
 // Update profile method
@@ -40,4 +40,4 @@ userSchema.methods.updateProfile = function (updateData) {
   return this.save();
 };
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.model("User", userSchema);

@@ -1,12 +1,12 @@
-const express = require('express');
+const express = require("express");
 const {
   addUser,
   patchUser,
   deleteUser,
   updateUser,
   getUsers,
-} = require('../controllers/userController');
-const authMiddleware = require('../middlewares/authMiddleware');
+} = require("../controllers/userController");
+const authMiddleware = require("../middlewares/authMiddleware");
 
 const router = express.Router();
 
@@ -38,7 +38,7 @@ const router = express.Router();
  *       400:
  *         description: Invalid input data
  */
-router.post('/', authMiddleware, addUser);
+router.post("/", authMiddleware, addUser);
 
 /**
  * @swagger
@@ -73,7 +73,7 @@ router.post('/', authMiddleware, addUser);
  *       400:
  *         description: Invalid input
  */
-router.patch('/:id', authMiddleware, patchUser);
+router.patch("/:id", authMiddleware, patchUser);
 
 /**
  * @swagger
@@ -94,7 +94,7 @@ router.patch('/:id', authMiddleware, patchUser);
  *       404:
  *         description: User not found
  */
-router.delete('/:id', authMiddleware, deleteUser);
+router.delete("/:id", authMiddleware, deleteUser);
 
 /**
  * @swagger
@@ -129,7 +129,7 @@ router.delete('/:id', authMiddleware, deleteUser);
  *       400:
  *         description: Invalid input
  */
-router.put('/:id', authMiddleware, updateUser);
+router.put("/:id", authMiddleware, updateUser);
 
 /**
  * @swagger
@@ -147,6 +147,6 @@ router.put('/:id', authMiddleware, updateUser);
  *               items:
  *                 $ref: '#/components/schemas/User'
  */
-router.get('/', authMiddleware, getUsers);
+router.get("/", authMiddleware, getUsers);
 
 module.exports = router;

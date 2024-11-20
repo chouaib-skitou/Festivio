@@ -1,13 +1,13 @@
 // routes/taskRoutes.js
-const express = require('express');
+const express = require("express");
 const {
   createTask,
   getAllTasks,
   updateTask,
   deleteTask,
   patchTask,
-} = require('../controllers/taskController');
-const authMiddleware = require('../middlewares/authMiddleware');
+} = require("../controllers/taskController");
+const authMiddleware = require("../middlewares/authMiddleware");
 
 const router = express.Router();
 
@@ -58,7 +58,7 @@ const router = express.Router();
  *       500:
  *         description: Internal server error
  */
-router.post('/', authMiddleware, createTask);
+router.post("/", authMiddleware, createTask);
 
 /**
  * @swagger
@@ -96,7 +96,7 @@ router.post('/', authMiddleware, createTask);
  *       500:
  *         description: Internal server error
  */
-router.get('/', authMiddleware, getAllTasks);
+router.get("/", authMiddleware, getAllTasks);
 
 /**
  * @swagger
@@ -137,7 +137,7 @@ router.get('/', authMiddleware, getAllTasks);
  *       500:
  *         description: Internal server error
  */
-router.put('/:id', authMiddleware, updateTask);
+router.put("/:id", authMiddleware, updateTask);
 
 /**
  * @swagger
@@ -163,7 +163,7 @@ router.put('/:id', authMiddleware, updateTask);
  *       500:
  *         description: Internal server error
  */
-router.delete('/:id', authMiddleware, deleteTask);
+router.delete("/:id", authMiddleware, deleteTask);
 
 /**
  * @swagger
@@ -202,6 +202,6 @@ router.delete('/:id', authMiddleware, deleteTask);
  *       500:
  *         description: Internal server error
  */
-router.patch('/:id', authMiddleware, patchTask);
+router.patch("/:id", authMiddleware, patchTask);
 
 module.exports = router;
