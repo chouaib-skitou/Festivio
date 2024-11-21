@@ -16,14 +16,12 @@ const app = express();
 // Middleware
 app.use(express.json());
 
-// CORS setup
-const allowedOrigins = [
-  process.env.FRONTEND_URL || 'http://localhost:3000',
-];
+// CORS setup - Allow all origins
 app.use(cors({
-  origin: allowedOrigins,
+  origin: true, // This allows requests from any origin
   credentials: true, // If cookies or auth headers are used
 }));
+
 
 
 // Swagger setup
