@@ -16,7 +16,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Move directory   
-        uses: cd backend
+        run: cd backend
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
