@@ -9,8 +9,7 @@ on:
     branches:
     - main
 env:
-  Base_dir: /Festivio
-  Backend_dir: ${{ env.Base_dir }}/backend
+  Backend_dir: /Festivio/backend
 
 jobs:
   build:
