@@ -9,7 +9,7 @@ on:
     branches:
     - main
 env:
-  Backend_dir: /Festivio/backend
+  Backend_dir: /home/runner/work/Festivio/Festivio/backend
 
 jobs:
   build:
