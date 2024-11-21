@@ -1,12 +1,12 @@
-const express = require('express');
+const express = require("express");
 const {
   createEvent,
   getEvents,
   updateEvent,
   deleteEvent,
   patchEvent,
-} = require('../controllers/eventController');
-const authMiddleware = require('../middlewares/authMiddleware');
+} = require("../controllers/eventController");
+const authMiddleware = require("../middlewares/authMiddleware");
 
 const router = express.Router();
 
@@ -56,7 +56,7 @@ const router = express.Router();
  *       500:
  *         description: Internal server error
  */
-router.post('/', authMiddleware, createEvent);
+router.post("/", authMiddleware, createEvent);
 
 /**
  * @swagger
@@ -73,7 +73,7 @@ router.post('/', authMiddleware, createEvent);
  *       500:
  *         description: Internal server error
  */
-router.get('/', authMiddleware, getEvents);
+router.get("/", authMiddleware, getEvents);
 
 /**
  * @swagger
@@ -119,7 +119,7 @@ router.get('/', authMiddleware, getEvents);
  *       500:
  *         description: Internal server error
  */
-router.put('/:id', authMiddleware, updateEvent);
+router.put("/:id", authMiddleware, updateEvent);
 
 /**
  * @swagger
@@ -165,7 +165,7 @@ router.put('/:id', authMiddleware, updateEvent);
  *       500:
  *         description: Internal server error
  */
-router.patch('/:id', authMiddleware, patchEvent);
+router.patch("/:id", authMiddleware, patchEvent);
 
 /**
  * @swagger
@@ -193,6 +193,6 @@ router.patch('/:id', authMiddleware, patchEvent);
  *       500:
  *         description: Internal server error
  */
-router.delete('/:id', authMiddleware, deleteEvent);
+router.delete("/:id", authMiddleware, deleteEvent);
 
 module.exports = router;
