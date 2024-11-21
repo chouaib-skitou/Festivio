@@ -16,6 +16,16 @@ const app = express();
 // Middleware
 app.use(express.json());
 
+// CORS setup
+const allowedOrigins = [
+  process.env.BACKEND_URL || 'http://localhost:3000',
+];
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true, // If cookies or auth headers are used
+}));
+
+
 // Swagger setup
 const swaggerOptions = {
     definition: {
