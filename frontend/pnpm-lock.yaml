@@ -41,9 +41,6 @@ importers:
       react-scripts:
         specifier: 5.0.1
         version: 5.0.1(@babel/plugin-syntax-flow@7.26.0(@babel/core@7.26.0))(@babel/plugin-transform-react-jsx@7.25.9(@babel/core@7.26.0))(@types/babel__core@7.20.5)(eslint@8.57.1)(react@18.3.1)(sass@1.81.0)(type-fest@0.21.3)(typescript@4.9.5)
-      sass:
-        specifier: ^1.81.0
-        version: 1.81.0
       tailwindcss:
         specifier: ^3.4.15
         version: 3.4.15
@@ -56,6 +53,13 @@ importers:
       zustand:
         specifier: ^5.0.1
         version: 5.0.1(@types/react@18.3.12)(immer@9.0.21)(react@18.3.1)
+    devDependencies:
+      eslint-config-react-app:
+        specifier: ^7.0.1
+        version: 7.0.1(@babel/plugin-syntax-flow@7.26.0(@babel/core@7.26.0))(@babel/plugin-transform-react-jsx@7.25.9(@babel/core@7.26.0))(eslint@8.57.1)(jest@27.5.1)(typescript@4.9.5)
+      sass:
+        specifier: ^1.81.0
+        version: 1.81.0
 
 packages:
 
