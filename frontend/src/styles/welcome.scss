@@ -1,0 +1,118 @@
+
+$background-color: #0f0f13;
+$card-background: #1a1a1f;
+$text-color: #ffffff;
+$input-background: #2a2a30;
+$button-background: #ffffff;
+$button-text: #000000;
+$border-radius: 16px;
+$transition: all 0.3s ease;
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Arial', sans-serif;
+}
+
+.welcome-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: $background-color;
+  position: relative;
+  overflow: hidden;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.5;
+  }
+
+  &::before {
+    background: linear-gradient(to right, #00ff87, #60efff);
+    top: -100px;
+    right: -100px;
+  }
+
+  &::after {
+    background: linear-gradient(to right, #ff0055, #ff00aa);
+    bottom: -100px;
+    left: -100px;
+  }
+
+  .welcome-message {
+    text-align: center;
+    background-color: $card-background;
+    padding: 2.5rem;
+    border-radius: $border-radius;
+    width: 100%;
+    max-width: 400px;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+
+    h1 {
+      color: $text-color;
+      font-size: 2.5rem;
+      margin-bottom: 2rem;
+    }
+
+    p {
+      color: $text-color;
+      font-size: 1.2rem;
+      margin-bottom: 2rem;
+    }
+
+    .explore-btn {
+      padding: 1rem 2rem;
+      background-color: $button-background;
+      color: $button-text;
+      border: none;
+      border-radius: $border-radius;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: $transition;
+      margin-top: 1.5rem;
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+      }
+    }
+
+    .auth-links {
+      display: flex;
+      justify-content: center;
+      gap: 1.5rem;
+      margin-top: 2rem;
+
+      .auth-btn {
+        padding: 0.75rem 2rem;
+        background-color: $button-background;
+        color: $button-text;
+        border: none;
+        border-radius: $border-radius;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: $transition;
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
+        }
+      }
+    }
+  }
+}
+
+.error-message {
+  color: #ff4d4d;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
