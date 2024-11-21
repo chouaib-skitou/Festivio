@@ -10,7 +10,7 @@ on:
     - main
 env:
   Base_dir: /Festivio
-  Backend_dir: ${{Base_dir}}/backend
+  Backend_dir: ${{ Base_dir }}/backend
 
 jobs:
   build:
@@ -19,22 +19,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Move directory   
-        run: cd ${{Backend_dir}}
+        run: cd ${{ Backend_dir }}
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18.12
       - name: Install dependencies 
         run: | 
-          cd ${{Backend_dir}}
+          cd ${{ Backend_dir }}
           npm install -g pnpm
       - name: Install pnpm dependencies
         run: | 
-          cd ${{Backend_dir}}
+          cd ${{ Backend_dir }}
           pnpm install
       - name: Run linter
         run: | 
-          cd ${{Backend_dir}}
+          cd ${{ Backend_dir }}
           pnpm run lint
       #- name: Run tests
       #  run: pnpm test
