@@ -1,12 +1,4 @@
 // controllers/authController.js
-<<<<<<< HEAD
-const User = require("../models/User");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const { validationResult } = require("express-validator");
-const nodemailer = require("nodemailer");
-const UserDTO = require("../dtos/UserDTO");
-=======
 const User = require('../models/User');
 const ResetPasswordRequest = require('../models/ResetPasswordRequest');
 const bcrypt = require('bcryptjs');
@@ -14,7 +6,6 @@ const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const nodemailer = require('nodemailer');
 const UserDTO = require('../dtos/UserDTO');
->>>>>>> 54badae674bd3e8189b1c6b6d20a8ef784ce9b9b
 
 // Helper functions to generate tokens
 const generateAccessToken = (userId) =>

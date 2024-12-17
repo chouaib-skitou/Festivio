@@ -1,17 +1,6 @@
-<<<<<<< HEAD
-const express = require("express");
-const {
-  register,
-  login,
-  refreshToken,
-  verifyEmail,
-} = require("../controllers/authController"); // Import verifyEmail
-const { check } = require("express-validator");
-=======
 const express = require('express');
 const { register, login, refreshToken, verifyEmail, resetPassword, requestPasswordReset} = require('../controllers/authController'); // Import verifyEmail
 const { check } = require('express-validator');
->>>>>>> 54badae674bd3e8189b1c6b6d20a8ef784ce9b9b
 
 const router = express.Router();
 
