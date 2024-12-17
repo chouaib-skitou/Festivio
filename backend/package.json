@@ -12,7 +12,11 @@
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
+<<<<<<< HEAD
     "cspell": "^8.16.0",
+=======
+    "cors": "^2.8.5",
+>>>>>>> 54badae674bd3e8189b1c6b6d20a8ef784ce9b9b
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "express-validator": "^7.2.0",

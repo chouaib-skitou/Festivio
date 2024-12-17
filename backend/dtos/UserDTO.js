@@ -1,4 +1,7 @@
 // dtos/UserDTO.js
+// improve user dto to include user details
+// dtos/UserDTO.js
+
 class UserDTO {
   constructor(user) {
     this.id = user._id;
