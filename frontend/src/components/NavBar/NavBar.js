@@ -56,10 +56,10 @@ const NavBar = () => {
             <>
             
             <Link 
-              to="/home" 
+              to="/events" 
               className={`nav-link ${location.pathname === '/home' ? 'active' : ''}`}
             >
-              Account
+              Events
             </Link>
               <button onClick={handleLogout} className="nav-link logout-button">
                 Logout
