@@ -28,14 +28,10 @@ jobs:
       - name: Install dependencies 
         run: | 
           cd ${{ env.Backend_dir }}
-          npm install -g pnpm
-      - name: Install pnpm dependencies
-        run: | 
-          cd ${{ env.Backend_dir }}
-          pnpm install
+          npm install
       - name: Run linter
         run: | 
           cd ${{ env.Backend_dir }}
-          pnpm run lint
+          npm run lint
       #- name: Run tests
       #  run: pnpm test
