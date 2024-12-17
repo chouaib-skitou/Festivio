@@ -29,5 +29,9 @@ jobs:
         run: | 
           cd ${{ env.Backend_dir }}
           npm install
+      - name: Lint with ESLint
+        run: |
+          cd ${{ env.Backend_dir }}
+          npm run lint
       #- name: Run tests
       #  run: pnpm test
