@@ -8,7 +8,7 @@ const taskRoutes = require('./routes/taskRoutes');
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 
-dotenv.config({ path: '.env.local' });
+dotenv.config({ path: '.env' });
 connectDB();
 
 const app = express();

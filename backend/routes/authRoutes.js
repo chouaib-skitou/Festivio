@@ -1,5 +1,5 @@
 const express = require('express');
-const { register, login, refreshToken, verifyEmail } = require('../controllers/authController'); // Import verifyEmail
+const { register, login, refreshToken, verifyEmail, resetPassword, requestPasswordReset} = require('../controllers/authController'); // Import verifyEmail
 const { check } = require('express-validator');
 
 const router = express.Router();
@@ -37,6 +37,9 @@ router.post('/register', [
   check('email', 'Please include a valid email').isEmail(),
   check('password', 'Password must be 6 or more characters').isLength({ min: 6 })
 ], register);
+
+
+
 
 /**
  * @swagger
@@ -127,4 +130,69 @@ router.post('/refresh-token', refreshToken);
  */
 router.get('/verify-email/:userId/:token', verifyEmail);
 
+/**
+ * @swagger
+ * /auth/reset-password-request:
+ *   post:
+ *     summary: Request a password reset
+ *     description: Sends a reset password email with a reset link
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password reset link sent
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
+router.post('/reset-password-request', requestPasswordReset);
+
+/**
+ * @swagger
+ * /auth/reset-password/{token}:
+ *   post:
+ *     summary: Reset user password
+ *     description: Resets the user's password using the provided token
+ *     tags: [Authentication]
+ *     parameters:
+ *       - in: path
+ *         name: token
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Reset password token
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               newPassword:
+ *                 type: string
+ *               confirmPassword:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password reset successfully
+ *       400:
+ *         description: Invalid token or passwords do not match
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
+router.post('/reset-password/:token', resetPassword);
+
 module.exports = router;
+
+

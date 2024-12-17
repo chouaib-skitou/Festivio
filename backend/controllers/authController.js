@@ -1,5 +1,6 @@
 // controllers/authController.js
 const User = require('../models/User');
+const ResetPasswordRequest = require('../models/ResetPasswordRequest');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
@@ -40,7 +41,7 @@ exports.register = async (req, res) => {
   }
 
   try {
-    const { username, email, password } = req.body;
+    const { firstName, lastName, username, email, password, role } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -58,9 +59,12 @@ exports.register = async (req, res) => {
 
     // Create new user
     const user = new User({
+      firstName,
+      lastName,
       username,
       email,
       password: hashedPassword,
+      role,
       isVerified: false,
     });
 
@@ -146,10 +150,10 @@ exports.login = async (req, res) => {
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
     // Generate tokens
-    const accessToken = generateAccessToken(user._id);
+    const token = generateAccessToken(user._id);
     const refreshToken = generateRefreshToken(user._id);
 
-    res.json({ user: new UserDTO(user), accessToken, refreshToken });
+    res.json({ user: new UserDTO(user), token, refreshToken });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Server error' });
@@ -167,4 +171,78 @@ exports.refreshToken = (req, res) => {
     const accessToken = generateAccessToken(decoded.userId);
     res.json({ accessToken, refreshToken });
   });
+};
+
+// Request Password Reset
+exports.requestPasswordReset = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Generate reset token
+    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+    // Save the reset token in ResetPasswordRequest
+    await ResetPasswordRequest.create({
+      token,
+      userId: user._id,
+      expiresAt: Date.now() + 3600000, // 1 hour expiry
+    });
+
+    // Send reset email
+    const resetLink = `${process.env.FRONTEND_URL}reset-password/${token}`;
+    await sendEmail(
+      email,
+      'Reset Your Password',
+      `<p>Click <a href="${resetLink}">here</a> to reset your password. This link will expire in 1 hour.</p>`
+    );
+
+    res.json({ message: 'Password reset link sent to your email.' });
+  } catch (error) {
+    console.error('Request password reset error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Reset Password
+exports.resetPassword = async (req, res) => {
+  const { token } = req.params; // Extract token from URL
+  const { newPassword, confirmPassword } = req.body;
+
+  try {
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ message: 'Passwords do not match' });
+    }
+
+    // Find the reset password request by token
+    const resetRequest = await ResetPasswordRequest.findOne({ token });
+    if (!resetRequest) {
+      return res.status(400).json({ message: 'Invalid or expired token' });
+    }
+
+    if (resetRequest.expiresAt < Date.now()) {
+      return res.status(400).json({ message: 'Token has expired' });
+    }
+
+    // Find the user by ID
+    const user = await User.findById(resetRequest.userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update the user's password
+    user.password = hashedPassword;
+    await user.save();
+
+    // Delete the reset password request
+    await ResetPasswordRequest.deleteOne({ _id: resetRequest._id });
+
+    res.json({ message: 'Password successfully reset. You can now log in with your new password.' });
+  } catch (error) {
+    console.error('Password reset error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 };
