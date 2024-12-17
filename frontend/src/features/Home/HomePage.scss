@@ -1,2 +1,235 @@
-/* src/features/Home/HomePage.scss */
-/* Add any specific styles if needed */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+$primary-color: #3498db;
+$secondary-color: #2c3e50;
+$text-color: #333;
+$light-color: #ecf0f1;
+
+body {
+  font-family: 'Poppins', sans-serif;
+  line-height: 1.6;
+  color: $text-color;
+  margin: 0;
+  padding: 0;
+}
+
+.home-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+// Hero Section
+.hero {
+  background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('../../media/images/10-hero-image-website-ideas-to-inspire-you-header-3-1024x655.png.webp') no-repeat center center/cover;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: $light-color;
+
+  .hero-content {
+    max-width: 800px;
+    padding: 0 20px;
+
+    h1 {
+      font-size: 3.5rem;
+      margin-bottom: 20px;
+    }
+
+    p {
+      font-size: 1.2rem;
+      margin-bottom: 30px;
+    }
+
+    .cta-button {
+      display: inline-block;
+      padding: 12px 30px;
+      font-size: 1.1rem;
+      background-color: $primary-color;
+      color: $light-color;
+      text-decoration: none;
+      border-radius: 5px;
+      transition: background-color 0.3s ease;
+
+      &:hover {
+        background-color: darken($primary-color, 10%);
+      }
+    }
+  }
+}
+
+// Stats Section
+.stats-section {
+  padding: 80px 0;
+  background-color: #f8f9fa;
+
+  .stats-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 40px;
+  }
+
+  .stat-item {
+    text-align: center;
+    padding: 20px;
+
+    .stat-number {
+      font-size: 3.5rem;
+      font-weight: 700;
+      color: $primary-color;
+      margin-bottom: 15px;
+    }
+
+    .stat-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 15px;
+      color: $secondary-color;
+    }
+
+    .stat-description {
+      font-size: 1rem;
+      color: $text-color;
+      line-height: 1.6;
+    }
+  }
+
+  .stats-cta {
+    text-align: center;
+    margin-top: 50px;
+
+    .cta-button {
+      display: inline-block;
+      padding: 12px 30px;
+      font-size: 1.1rem;
+      background-color: $primary-color;
+      color: $light-color;
+      text-decoration: none;
+      border-radius: 5px;
+      transition: background-color 0.3s ease;
+
+      &:hover {
+        background-color: darken($primary-color, 10%);
+      }
+    }
+  }
+}
+
+// Footer
+.footer {
+  background-color: $secondary-color;
+  color: $light-color;
+  padding: 50px 0 20px;
+  margin-top: auto;
+
+  .footer-content {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  .footer-section {
+    flex: 1;
+    margin-bottom: 30px;
+    min-width: 200px;
+
+    h3 {
+      font-size: 1.2rem;
+      margin-bottom: 15px;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+
+      li {
+        margin-bottom: 10px;
+
+        a {
+          color: $light-color;
+          text-decoration: none;
+          transition: color 0.3s ease;
+
+          &:hover {
+            color: $primary-color;
+          }
+        }
+      }
+    }
+  }
+
+  .social-icons {
+    display: flex;
+    gap: 15px;
+
+    a {
+      color: $light-color;
+      font-size: 1.5rem;
+      transition: color 0.3s ease;
+
+      &:hover {
+        color: $primary-color;
+      }
+    }
+  }
+
+  .footer-bottom {
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .hero {
+    .hero-content {
+      h1 {
+        font-size: 2.5rem;
+      }
+
+      p {
+        font-size: 1rem;
+      }
+    }
+  }
+
+  .footer {
+    .footer-content {
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .footer-section {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+  }
+  .stats-section {
+    .stats-container {
+      grid-template-columns: 1fr;
+      gap: 30px;
+    }
+
+    .stat-item {
+      .stat-number {
+        font-size: 3rem;
+      }
+
+      .stat-title {
+        font-size: 1rem;
+      }
+    }
+  }
+}
