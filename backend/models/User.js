@@ -3,11 +3,17 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
+  firstName: { type: String, required: true },
+  lastName: { type: String, required: true },
   username: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  role: { type: String, enum: ['Organizer', 'Participant'], required: false },
-  isVerified: { type: Boolean, default: false }, // New field
+  role: { 
+    type: String, 
+    enum: ['ROLE_ADMIN', 'ROLE_PARTICIPANT', 'ROLE_ORGANIZER_ADMIN', 'ROLE_ORGANIZER'], 
+    required: true 
+  },
+  isVerified: { type: Boolean, default: false },
   events: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Event' }], // Events the user is part of
   tasks: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Task' }],   // Tasks assigned to the user
 }, { timestamps: true });

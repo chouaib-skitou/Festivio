@@ -1,4 +1,3 @@
-
 # Festivio
 
 Festivio is an event planning application designed to streamline the organization and management of events. It provides tools for event creation, participant management, task delegation, and real-time notifications, all while ensuring a user-friendly experience.
@@ -27,7 +26,7 @@ Festivio is an event planning application designed to streamline the organizatio
 ## Technologies Used
 
 - **Frontend**:
-  - React (with TypeScript)
+  - React (with JavaScript)
   - React Router
   - Zustand (state management)
   - Zod (schema validation)
@@ -44,130 +43,104 @@ Festivio is an event planning application designed to streamline the organizatio
   - GitHub Actions (CI/CD)
   - Deployment on Vercel (frontend) and server for backend
 
-## Prerequisites
+## Setup Instructions
 
-- [Node.js](https://nodejs.org/) (v18+)
-- [Docker](https://www.docker.com/)
-- [pnpm](https://pnpm.io/) (for package management)
-- MongoDB (local or cloud)
+### Backend Setup
 
-## Installation
+1. **MongoDB Configuration**:
+   - Create a [MongoDB Atlas account](https://www.mongodb.com/cloud/atlas) or use an existing MongoDB instance.
+   - Obtain the connection string and set it in the `.env` file as `MONGO_URI`.
 
-### Backend
+2. **JWT Secrets**:
+   - Generate secrets for `JWT_SECRET` and `JWT_REFRESH_SECRET` using the following command:
+     ```bash
+     node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+     ```
+   - Add these to the `.env` file:
+     ```env
+     JWT_SECRET=<your_generated_secret>
+     JWT_REFRESH_SECRET=<your_generated_refresh_secret>
+     ```
 
-1. Navigate to the `Backend` directory:
-   ```bash
-   cd Backend
-   ```
+3. **Mailer Setup**:
+   - Use a Gmail account or any SMTP provider to send emails.
+   - Enable "less secure apps" or generate an app password for Gmail.
+   - Add these to the `.env` file:
+     ```env
+     EMAIL_USER=<your_email@example.com>
+     EMAIL_PASS=<your_app_password>
+     ```
 
-2. Create an `.env` file with the following variables:
-   ```plaintext
-   PORT=5000
-   MONGO_URI=mongodb://mongo:27017/festivio
-   JWT_SECRET=your_jwt_secret
-   JWT_REFRESH_SECRET=your_jwt_refresh_secret
-   EMAIL_USER=your_email@example.com
-   EMAIL_PASS=your_email_password
-   ```
+4. **Environment URLs**:
+   - Add the following to your `.env` file:
+     ```env
+     FRONTEND_URL=http://localhost:3000/
+     BACKEND_URL=http://localhost:5000/
+     ```
 
-3. Build and run the backend with Docker Compose:
+5. **Install Dependencies and Run**:
+   - Navigate to the `backend` folder:
+     ```bash
+     cd backend
+     npm install
+     npm run dev
+     ```
+   - The backend will start at [http://localhost:5000](http://localhost:5000).
+
+### Frontend Setup
+
+1. **Backend URL Configuration**:
+   - Add the following to the `.env` file in the `frontend` folder:
+     ```env
+     REACT_APP_BACKEND_URL=http://localhost:5000/
+     ```
+
+2. **Install Dependencies and Run**:
+   - Navigate to the `frontend` folder:
+     ```bash
+     cd frontend
+     npm install
+     npm run dev
+     ```
+   - The frontend will start at [http://localhost:3000](http://localhost:3000).
+
+### Docker Setup
+
+For production or local development, you can run the project using **Docker**. Only the **frontend** is exposed publicly, while the backend is accessible internally.
+
+1. Make sure you have **Docker** and **Docker Compose** installed on your machine.
+
+2. Run the following command to start both the frontend and backend containers:
    ```bash
    docker-compose up --build
    ```
 
-   The backend will run on `http://localhost:5000`.
+3. **Access the application**:
+   - **Frontend**: [http://localhost:3000](http://localhost:3000)
+   - The **backend** is only accessible to the frontend container and is not exposed publicly.
 
-### Frontend
+### Project Directory Structure
 
-1. Navigate to the `Frontend` directory:
-   ```bash
-   cd Frontend
-   ```
+The `docker-compose.yml` file orchestrates both the frontend and backend containers. Here's a high-level overview:
 
-2. Install dependencies:
-   ```bash
-   pnpm install
-   ```
-
-3. Create an `.env` file with the following variable:
-   ```plaintext
-   REACT_APP_API_URL=http://localhost:5000
-   ```
-
-4. Start the development server:
-   ```bash
-   pnpm dev
-   ```
-
-   The frontend will run on `http://localhost:3000`.
-
-## Running the Application with Docker
-
-To run both frontend and backend simultaneously using Docker Compose, navigate to the root directory (`App`) and execute:
-```bash
-docker-compose up --build
+```plaintext
+.
+├── docker-compose.yml  # Docker Compose configuration
+├── backend/            # Backend code (Node.js & Express)
+│   ├── Dockerfile      # Dockerfile for the backend
+│   └── ...
+├── frontend/           # Frontend code (React)
+│   ├── Dockerfile      # Dockerfile for the frontend
+│   └── ...
 ```
 
-This will start:
-- Backend on `http://localhost:5000`
-- Frontend on `http://localhost:3000`
+### Why the Backend is Not Exposed
 
-## Tests
+The backend container is not publicly exposed for security purposes. It communicates internally with the frontend container. This setup ensures that the backend endpoints are protected from direct access.
 
-### Backend
+## Final Notes
 
-- To run backend tests, navigate to the `Backend` directory and run:
-  ```bash
-  npm test
-  ```
+- For detailed API documentation, refer to the Swagger UI available once the backend is running.
+- Ensure all environment variables are set correctly for both frontend and backend.
+- Feel free to contribute to this project by submitting issues or pull requests on GitHub.
 
-### Frontend
-
-- To run frontend tests, navigate to the `Frontend` directory and run:
-  ```bash
-  pnpm test
-  ```
-
-## Project Structure
-
-```
-App/
-├── Backend/
-│   ├── config/
-│   │   └── db.js
-│   ├── controllers/
-│   │   └── authController.js
-│   ├── models/
-│   │   └── User.js
-│   ├── routes/
-│   │   └── authRoutes.js
-│   ├── .env
-│   ├── Dockerfile
-│   ├── docker-compose.yml
-│   └── server.js
-├── Frontend/
-│   ├── public/
-│   ├── src/
-│   │   ├── api/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── store/
-│   │   ├── styles/
-│   │   └── utils/
-│   ├── .env
-│   ├── Dockerfile
-│   └── vite.config.ts
-└── README.md
-```
-
-## Contributing
-
-1. Fork the repository.
-2. Create your feature branch: `git checkout -b feature-name`.
-3. Commit your changes: `git commit -m 'Add feature name'`.
-4. Push to the branch: `git push origin feature-name`.
-5. Submit a pull request.
-
-## License
-
-This project is licensed under the MIT License. See the `LICENSE` file for details.
