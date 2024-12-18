@@ -3,7 +3,6 @@ import { useNavigate, Link } from 'react-router-dom';
 import { z } from 'zod';
 import axiosInstance from '../../../api/axiosInstance';
 import useAuthStore from '../../../stores/authStore';
-import './Login.scss';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -25,22 +24,16 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      // Validate form inputs
       loginSchema.parse(formData);
-      
-      // Send login request
       const response = await axiosInstance.post('/api/auth/login', formData);
       console.log(response.data);
 
-      // Destructure tokens and user from the response
       const { token, refreshToken, user } = response.data;
 
-      // Save to Zustand store and localStorage
       setToken(token);
       setRefreshToken(refreshToken);
       setUser(user);
 
-      // Navigate to home page
       navigate('/home');
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -55,49 +48,47 @@ const Login = () => {
     }
   };
 
+  const inputClasses = "w-full px-3 py-2 bg-transparent border-b border-gray-200 focus:border-blue-500 focus:outline-none text-gray-700 placeholder-gray-500";
+
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <div className="login-header">
-          <h1>Welcome Back</h1>
-          <p>Sign in to access your account and stay connected.</p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="max-w-md w-full bg-white rounded-lg shadow-sm p-8 space-y-6">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold text-gray-900">Welcome Back</h2>
+          <p className="mt-2 text-sm text-gray-600">Sign in to access your account and stay connected.</p>
         </div>
-        
-        <form onSubmit={handleSubmit} className="login-form">
-          {error && (
-            <div className="error-message">
-              {error}
-            </div>
-          )}
-          
-          <div className="form-group">
-            <label htmlFor="email" className="sr-only">Email</label>
+
+        {error && (
+          <div className="p-4 rounded-md bg-red-50 text-red-700">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
             <input
-              id="email"
               type="email"
+              placeholder="Enter your email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder="Enter your email"
               required
-              className="form-input"
+              className={inputClasses}
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="password" className="sr-only">Password</label>
+          <div>
             <input
-              id="password"
               type="password"
+              placeholder="Enter your password"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              placeholder="Enter your password"
               required
-              className="form-input"
+              className={inputClasses}
             />
           </div>
 
-          <div className="form-options">
-            <Link to="/forgot-password" className="forgot-password">
+          <div className="flex items-center justify-end">
+            <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-500">
               Forgot your password?
             </Link>
           </div>
@@ -105,18 +96,16 @@ const Login = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className="sign-in-button"
+            className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
           >
             {isLoading ? "Signing you in..." : "Sign In"}
           </button>
 
-          <div className="create-account">
-            <p>
-              Don’t have an account?{' '}
-              <Link to="/register" className="sign-up-link">
-                Create one here.
-              </Link>
-            </p>
+          <div className="text-center text-sm">
+            <span className="text-gray-600">Don't have an account? </span>
+            <Link to="/register" className="text-blue-600 hover:text-blue-500 font-medium">
+              Create one here.
+            </Link>
           </div>
         </form>
       </div>
