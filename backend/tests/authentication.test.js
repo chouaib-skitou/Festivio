@@ -141,4 +141,9 @@ describe('Authentication API', () => {
       expect(response.body.message).toBe('User not found');
     });
   });
+  afterAll(async () => {
+    setTimeout(() => {
+        process.exit(0);
+      }, 5000); 
+    });
 });
