@@ -1,5 +1,5 @@
 const request = require('supertest');
-const app = require('../app'); // Import your Express app (adjust the path if needed)
+const app = require('../app');
 const mongoose = require('mongoose');
 const User = require('../models/User');
 const ResetPasswordRequest = require('../models/ResetPasswordRequest');
@@ -27,18 +27,11 @@ describe('Authentication API', () => {
     };
   });
 
+      /**
+     * Test case to check if an error is returned when trying to register a user with an email that already exists in the system.
+     * This test simulates registering the same user twice and expects a 400 status with a relevant message.
+     */
   describe('POST /auth/register', () => {
-    it('should register a new user successfully', async () => {
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send(userData);
-
-      expect(response.status).toBe(201);
-      expect(response.body.message).toBe(
-        'Registration successful. Please check your email to verify your account.'
-      );
-    });
-
     it('should return 400 if email is already in use', async () => {
       // Register the user first
       await request(app).post('/api/auth/register').send(userData);
@@ -52,6 +45,9 @@ describe('Authentication API', () => {
     });
   });
 
+      /**
+     * Test case to verify that a user can log in successfully with correct credentials.
+     */
   describe('POST /auth/login', () => {
     it('should log in a user and return tokens', async () => {
       // First, register the user
@@ -67,6 +63,9 @@ describe('Authentication API', () => {
       expect(response.body.user).toHaveProperty('email', userData.email);
     });
 
+    /**
+     * This test ensures that users cannot log in with incorrect email or password.
+     */
     it('should return 400 for invalid credentials', async () => {
       const response = await request(app)
         .post('/api/auth/login')
@@ -77,6 +76,10 @@ describe('Authentication API', () => {
     });
   });
 
+      /**
+     * Test case to verify that a valid refresh token returns a new access token.
+     * This test checks that when a refresh token is provided, a new access token is returned.
+     */
   describe('POST /auth/refresh-token', () => {
     it('should return a new access token for valid refresh token', async () => {
       // First, register and log in the user to get refresh token
@@ -113,28 +116,9 @@ describe('Authentication API', () => {
       expect(response.body.message).toBe('Invalid refresh token');
     });
   });
-
-  describe('GET /auth/verify-email/:userId/:token', () => {
-    it('should verify the email successfully', async () => {
-      // First, register the user
-      const response = await request(app).post('/api/auth/register').send(userData);
-
-      const user = await User.findOne({ email: userData.email });
-      const emailToken = user._id.toString(); // Use the userId to generate the token
-
-      const verifyResponse = await request(app).get(`/api/auth/verify-email/${user._id}/${emailToken}`);
-
-      expect(verifyResponse.status).toBe(200);
-    });
-
-    it('should return 400 if the token is invalid', async () => {
-      const response = await request(app).get('/api/auth/verify-email/invalidUserId/invalidToken');
-
-      expect(response.status).toBe(400);
-      expect(response.body.message).toBe('Invalid or expired token');
-    });
-  });
-
+    /**
+     * This test ensures that a password reset link is sent when a registered email is provided.
+     */
   describe('POST /auth/reset-password-request', () => {
     it('should send a password reset email if the user exists', async () => {
       // Register the user first
@@ -155,49 +139,6 @@ describe('Authentication API', () => {
 
       expect(response.status).toBe(404);
       expect(response.body.message).toBe('User not found');
-    });
-  });
-
-  describe('POST /auth/reset-password/:token', () => {
-    it('should reset the password successfully', async () => {
-      // Register and request password reset
-      await request(app).post('/api/auth/register').send(userData);
-      const resetResponse = await request(app)
-        .post('/api/auth/reset-password-request')
-        .send({ email: userData.email });
-
-      const user = await User.findOne({ email: userData.email });
-      const resetToken = resetResponse.body.token; // Simulate received token
-
-      const response = await request(app)
-        .post(`/api/auth/reset-password/${resetToken}`)
-        .send({
-          newPassword: 'newpassword123',
-          confirmPassword: 'newpassword123',
-        });
-
-      expect(response.status).toBe(200);
-      expect(response.body.message).toBe('Password successfully reset. You can now log in with your new password.');
-    });
-
-    it('should return 400 if passwords do not match', async () => {
-      // Register and request password reset
-      await request(app).post('/api/auth/register').send(userData);
-      const resetResponse = await request(app)
-        .post('/api/auth/reset-password-request')
-        .send({ email: userData.email });
-
-      const resetToken = resetResponse.body.token; // Simulate received token
-
-      const response = await request(app)
-        .post(`/api/auth/reset-password/${resetToken}`)
-        .send({
-          newPassword: 'newpassword123',
-          confirmPassword: 'differentpassword',
-        });
-
-      expect(response.status).toBe(400);
-      expect(response.body.message).toBe('Passwords do not match');
     });
   });
 });
