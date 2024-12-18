@@ -4,3 +4,4 @@ node_modules
 .Idea*
 *lock.json
 *lock.yaml
+*/public/*

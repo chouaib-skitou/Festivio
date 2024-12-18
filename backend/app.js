@@ -8,6 +8,16 @@ const eventRoutes = require('./routes/eventRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
+const fs = require('fs');
+const path = require('path');
+
+// Ensure 'public/images' directory exists
+const uploadDir = path.join(__dirname, 'public', 'images');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+  console.log('Created upload directory:', uploadDir);
+}
+
 
 dotenv.config({ path: '.env' });
 connectDB();
@@ -16,6 +26,9 @@ const app = express();
 
 // Middleware
 app.use(express.json());
+
+app.use('/images', express.static('public/images'));
+
 
 // CORS Setup: Allow all origins
 app.use(cors({
