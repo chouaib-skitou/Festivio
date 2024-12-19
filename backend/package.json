@@ -1,5 +1,5 @@
 {
-  "name": "rest_api",
+  "name": "Festivio",
   "version": "1.0.0",
   "description": "Node.js and Express backend with MongoDB",
   "main": "server.js",
