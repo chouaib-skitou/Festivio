@@ -4,6 +4,8 @@ on:
   push: 
     branches:
     - master
+    - feature/setup_actions
+    - feature/event_show_connection
     - develop
     - feature/tests
   pull_request:

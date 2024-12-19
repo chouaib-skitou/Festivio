@@ -5,6 +5,7 @@ import useAuthStore from '../stores/authStore';
 import LandingPage from '../features/LandingPage/LandingPage';
 import ProfilePage from "../features/ProfilePage/ProfilePage";
 import EventPage from "../features/Event/EventPage";
+import EventShow from "../features/Event/EventShow";
 
 const PrivateRoutes = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
@@ -15,6 +16,7 @@ const PrivateRoutes = () => {
       {/* Add nested private routes here */}
       <Route path="/profile/*" element={<ProfilePage />} />
       <Route path="/events" element={<EventPage />} />
+      <Route path="/events/:id" element={<EventShow />} />
     </Routes>
   ) : (
     <Navigate to="/login" replace />
