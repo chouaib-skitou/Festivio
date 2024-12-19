@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { MoreVertical } from 'lucide-react';
+import { MoreVertical, Plus } from 'lucide-react';
 import axiosInstance from "../../api/axiosInstance";
-import useAuthStore from "../../stores/authStore";
+//import useAuthStore from "../../stores/authStore";
+import ConfirmationModal from "../../components/Modals/ConfirmationModal";
 
 const EventPage = () => {
+  const user = JSON.parse(localStorage.getItem('user'));
   const [events, setEvents] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [confirmationModal, setConfirmationModal] = useState({ isOpen: false, eventId: null });
   const navigate = useNavigate();
+  //const { user } = useAuthStore();
 
   useEffect(() => {
     fetchEvents();
@@ -20,9 +24,19 @@ const EventPage = () => {
   const fetchEvents = async () => {
     try {
       const response = await axiosInstance.get("/api/events");
-      if (response.data && response.data.events && Array.isArray(response.data.events)) {
-        setEvents(response.data.events);
+      console.log("API response:", response.data);
+      if (response.data && Array.isArray(response.data.events)) {
+        const eventsWithParticipation = response.data.events.map(event => {
+          const isParticipating = event.participants.some(participant => participant._id === user.id);
+          console.log(`Event ${event.id} - isParticipating:`, isParticipating);
+          return {
+            ...event,
+            isParticipating
+          };
+        });
+        setEvents(eventsWithParticipation);
       } else {
+        console.error("Unexpected API response format:", response.data);
         setEvents([]);
       }
       setIsLoading(false);
@@ -36,9 +50,29 @@ const EventPage = () => {
   const handleParticipate = async (eventId) => {
     try {
       await axiosInstance.post(`/api/events/${eventId}/participate`);
-      // You might want to show a success message or update the UI
+      setEvents(events.map(event =>
+        event.id === eventId ? { ...event, isParticipating: true } : event
+      ));
     } catch (error) {
       console.error("Error participating in event:", error);
+    }
+  };
+
+  const handleUnparticipate = async (eventId) => {
+    setConfirmationModal({ isOpen: true, eventId });
+  };
+
+  const confirmUnparticipate = async () => {
+    const eventId = confirmationModal.eventId;
+    try {
+      await axiosInstance.post(`/api/events/${eventId}/unparticipate`);
+      setEvents(events.map(event =>
+        event.id === eventId ? { ...event, isParticipating: false } : event
+      ));
+    } catch (error) {
+      console.error("Error unparticipating from event:", error);
+    } finally {
+      setConfirmationModal({ isOpen: false, eventId: null });
     }
   };
 
@@ -58,9 +92,8 @@ const EventPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const user = JSON.parse(localStorage.getItem("user"));
     if (!user || !user.id) {
-      console.error("User not found in localStorage");
+      console.error("User not found");
       return;
     }
 
@@ -78,7 +111,7 @@ const EventPage = () => {
         headers: { "Content-Type": "multipart/form-data" },
       });
       closeModal();
-      fetchEvents(); // Refresh the events list
+      fetchEvents();
     } catch (error) {
       console.error("Error creating event:", error.response?.data?.message || "Server error");
     }
@@ -101,22 +134,24 @@ const EventPage = () => {
       <div className="container mx-auto px-6 py-8">
         <div className="flex justify-between items-center mb-10">
           <h1 className="text-3xl font-bold text-white">Events</h1>
-          <button
-            onClick={openModal}
-            className="bg-[#3B82F6] hover:bg-[#2563EB] text-white font-semibold py-2.5 px-6 rounded-full transition-colors duration-200"
-          >
-            Add Event
-          </button>
+          {(user?.role === 'ROLE_ORGANIZER_ADMIN' || user?.role === 'ROLE_ADMIN') && (
+            <button
+              onClick={openModal}
+              className="bg-[#3B82F6] hover:bg-[#2563EB] text-white font-semibold py-2.5 px-6 rounded-full transition-colors duration-200"
+            >
+              Add Event
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {events.length > 0 ? (
+          {events && events.length > 0 ? (
             events.map((event) => (
               <div
                 key={event.id}
                 className="bg-[#1E293B] rounded-xl overflow-hidden shadow-lg transition-transform duration-200 hover:transform hover:scale-[1.02]"
               >
-                <div 
+                <div
                   className="cursor-pointer"
                   onClick={() => navigate(`/events/${event.id}`)}
                 >
@@ -138,7 +173,7 @@ const EventPage = () => {
                         </p>
                       </div>
                     </div>
-                    <button 
+                    <button
                       className="text-gray-400 hover:text-white transition-colors duration-200"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -161,17 +196,27 @@ const EventPage = () => {
                     </p>
                   </div>
                 </div>
-                <div className="px-5 pb-5">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleParticipate(event.id);
-                    }}
-                    className="w-full bg-[#3B82F6] hover:bg-[#2563EB] text-white font-medium py-2 rounded transition-colors duration-200"
-                  >
-                    Participate
-                  </button>
-                </div>
+                {user?.role === 'ROLE_PARTICIPANT' && (
+                  <div className="px-5 pb-5">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (event.isParticipating) {
+                          handleUnparticipate(event.id);
+                        } else {
+                          handleParticipate(event.id);
+                        }
+                      }}
+                      className={`w-full font-medium py-2 rounded transition-colors duration-200 ${
+                        event.isParticipating
+                          ? 'bg-red-500 hover:bg-red-600 text-white'
+                          : 'bg-[#3B82F6] hover:bg-[#2563EB] text-white'
+                      }`}
+                    >
+                      {event.isParticipating ? 'Unparticipate' : 'Participate'}
+                    </button>
+                  </div>
+                )}
               </div>
             ))
           ) : (
@@ -318,9 +363,18 @@ const EventPage = () => {
             </div>
           </div>
         )}
+
+        <ConfirmationModal
+          isOpen={confirmationModal.isOpen}
+          onClose={() => setConfirmationModal({ isOpen: false, eventId: null })}
+          onConfirm={confirmUnparticipate}
+          title="Unparticipate from Event"
+          message="Are you sure you want to unparticipate from this event?"
+        />
       </div>
     </div>
   );
 };
 
 export default EventPage;
+
