@@ -1,0 +1,40 @@
+name : CI/CD pipeline
+
+on:
+  push: 
+    branches:
+    - master
+    - feature/setup_actions
+    - feature/event_show_connection
+  pull_request:
+    branches:
+    - master
+env:
+  Backend_dir: /home/runner/work/Festivio/Festivio/backend
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps: 
+      - name: dir
+        run: echo `pwd`
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Move directory   
+        run: cd ${{ env.Backend_dir }}
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.12
+      - name: Install dependencies 
+        run: | 
+          cd ${{ env.Backend_dir }}
+          npm install
+      - name: Lint with ESLint
+        run: |
+          cd ${{ env.Backend_dir }}
+          npm run lint
+      - name: Format with Prettier
+        run: |
+          cd ${{ env.Backend_dir }}
+          npm run format

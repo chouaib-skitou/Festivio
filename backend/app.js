@@ -10,6 +10,8 @@ const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const fs = require('fs');
 const path = require('path');
+const fs = require('fs');
+const path = require('path');
 
 // Load environment variables
 dotenv.config({ path: '.env' });

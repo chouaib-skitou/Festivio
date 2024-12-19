@@ -1,23 +1,46 @@
 // controllers/eventController.js
 const Event = require('../models/Event');
 const EventDTO = require('../dtos/EventDTO');
+const upload = require('../middlewares/uploadMiddleware');
 
 // Create an event
 exports.createEvent = async (req, res) => {
   try {
-    const { name, description, date, participants } = req.body;
+    const { name, description, date, participants, isOnline, zoomLink, organizer } = req.body;
 
-    // Only organizers can create events
-    if (req.user.role !== 'Organizer') {
-      return res.status(403).json({ message: 'Access denied' });
+    console.log('Decoded User:', req.user);
+    console.log('Request Body:', req.body);
+
+    // Ensure required fields exist
+    if (!req.user) {
+      return res.status(403).json({ message: 'User information missing in request' });
     }
+
+    if (!organizer) {
+      return res.status(400).json({ message: 'Organizer ID is required' });
+    }
+
+    // Role validation
+    if (req.user.role !== 'ROLE_ORGANIZER_ADMIN' && req.user.role !== 'ROLE_ADMIN') {
+      return res.status(403).json({ message: 'Access denied: Invalid role' });
+    }
+
+    // Ensure organizer matches the logged-in user
+    if (organizer.toString() !== req.user.userId.toString()) {
+      return res.status(403).json({ message: 'Access denied: Organizer ID mismatch' });
+    }
+
+    const imagePath = req.file ? `images/${req.file.filename}` : null;
 
     const event = new Event({
       name,
       description,
       date,
-      organizer: req.user._id,
+      organizer: req.user.userId,
       participants,
+      isOnline,
+      zoomLink,
+      imagePath,
     });
 
     await event.save();
@@ -27,21 +50,39 @@ exports.createEvent = async (req, res) => {
       event: new EventDTO(event),
     });
   } catch (error) {
+    console.error('Error creating event:', error.message);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
+
+
+
+// Get events
 // Get events
 exports.getEvents = async (req, res) => {
   try {
-    const events = await Event.find({ organizer: req.user._id }).populate('participants tasks');
-    const eventDTOs = events.map((event) => new EventDTO(event));
+    let events;
 
+    // Check user role and fetch events accordingly
+    if (req.user.role === 'ROLE_ORGANIZER_ADMIN' || req.user.role === 'ROLE_PARTICIPANT') {
+      // Get events created by the user
+      events = await Event.find({ organizer: req.user.userId }).populate('participants tasks');
+    } else if (req.user.role === 'ROLE_ADMIN') {
+      // Get all events
+      events = await Event.find().populate('participants tasks');
+    }  else {
+      return res.status(403).json({ message: 'Access denied: Invalid role' });
+    }
+
+    const eventDTOs = events.map((event) => new EventDTO(event));
     res.status(200).json({ events: eventDTOs });
   } catch (error) {
+    console.error('Error fetching events:', error.message);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
 
 // Update an event
 exports.updateEvent = async (req, res) => {
@@ -122,3 +163,82 @@ exports.deleteEvent = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+
+// Participate in an event
+exports.participateInEvent = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find the event by ID
+    const event = await Event.findById(id);
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+
+    // Check if the user is already a participant
+    if (event.participants.includes(req.user.userId)) {
+      return res.status(400).json({ message: 'User is already a participant in this event' });
+    }
+
+    // Add the user to the participants list
+    event.participants.push(req.user.userId);
+    await event.save();
+
+    res.status(200).json({ message: 'Successfully added as a participant', event: new EventDTO(event) });
+  } catch (error) {
+    console.error('Error participating in event:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+
+// Unparticipate from an event
+exports.unparticipateEvent = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.userId;
+
+  try {
+    const event = await Event.findById(id);
+
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+
+    if (!event.participants.includes(userId)) {
+      return res.status(400).json({ message: 'User is not participating in this event' });
+    }
+
+    // Remove user from participants
+    event.participants = event.participants.filter(participantId => participantId.toString() !== userId);
+    await event.save();
+
+    res.status(200).json({ message: 'Unparticipated successfully', event: event });
+  } catch (error) {
+    console.error('Error unparticipating from event:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+
+// Get a single event by ID
+exports.getEventById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Find the event by ID and populate tasks and participants
+    const event = await Event.findById(id)
+      .populate('tasks') // Populate tasks
+      .populate('participants'); // Populate participants
+
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+
+    res.status(200).json({ event: new EventDTO(event) });
+  } catch (error) {
+    console.error('Error fetching event:', error.message);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
