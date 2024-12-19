@@ -1,24 +1,36 @@
-import React, { useState } from 'react';
-import './EventPage.scss';
-import paellaImage from '../../media/images/paella.jpg';
+import React, { useState, useEffect } from "react";
+import "./EventPage.scss";
 import { MoreVertical } from 'lucide-react';
+import axiosInstance from "../../api/axiosInstance";
+import useAuthStore from "../../stores/authStore";
 
 const EventPage = () => {
+  const [events, setEvents] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isOnline, setIsOnline] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const dummyEvents = Array(10).fill().map((_, index) => ({
-    id: index + 1,
-    name: `Event ${index + 1}`,
-    description: `This is a detailed description for Event ${index + 1}. Join us for an amazing experience that you won't forget.`,
-    date: new Date(Date.now() + Math.random() * 10000000000).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    }),
-    organizer: 'R'
-  }));
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  const fetchEvents = async () => {
+    try {
+      const response = await axiosInstance.get("/api/events");
+      if (response.data && response.data.events && Array.isArray(response.data.events)) {
+        setEvents(response.data.events);
+      } else {
+        setEvents([]);
+      }
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      setError("Failed to load events. Please try again later.");
+      setIsLoading(false);
+    }
+  };
 
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => {
@@ -33,11 +45,46 @@ const EventPage = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle form submission here
-    closeModal();
+
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user || !user.id) {
+      console.error("User not found in localStorage");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("name", e.target.name.value);
+    formData.append("description", e.target.description.value);
+    formData.append("date", e.target.date.value);
+    formData.append("isOnline", isOnline);
+    formData.append("organizer", user.id);
+    if (isOnline) formData.append("zoomLink", e.target.zoomLink.value);
+    if (e.target.image.files[0]) formData.append("image", e.target.image.files[0]);
+
+    try {
+      await axiosInstance.post("/api/events", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      closeModal();
+      fetchEvents(); // Refresh the events list
+    } catch (error) {
+      console.error("Error creating event:", error.response?.data?.message || "Server error");
+    }
   };
+
+  if (isLoading) {
+    return <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
+      <p className="text-white text-xl">Loading events...</p>
+    </div>;
+  }
+
+  if (error) {
+    return <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
+      <p className="text-red-500 text-xl">{error}</p>
+    </div>;
+  }
 
   return (
     <div className="min-h-screen bg-[#0F172A] mt-16">
@@ -53,38 +100,59 @@ const EventPage = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {dummyEvents.map((event) => (
-            <div key={event.id} className="bg-[#1E293B] rounded-xl overflow-hidden shadow-lg transition-transform duration-200 hover:transform hover:scale-[1.02]">
-              <div className="p-5 flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="w-10 h-10 rounded-full bg-[#EF4444] flex items-center justify-center text-white font-semibold">
-                    {event.organizer}
+          {events.length > 0 ? (
+            events.map((event) => (
+              <div
+                key={event.id}
+                className="bg-[#1E293B] rounded-xl overflow-hidden shadow-lg transition-transform duration-200 hover:transform hover:scale-[1.02]"
+              >
+                <div className="p-5 flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 rounded-full bg-[#EF4444] flex items-center justify-center text-white font-semibold">
+                      {event.organizer && typeof event.organizer === 'string' ? event.organizer[0] : 'E'}
+                    </div>
+                    <div className="ml-4">
+                      <h2 className="text-lg font-semibold text-white">
+                        {event.name}
+                      </h2>
+                      <p className="text-sm text-gray-400">
+                        {new Date(event.date).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </p>
+                    </div>
                   </div>
-                  <div className="ml-4">
-                    <h2 className="text-lg font-semibold text-white">{event.name}</h2>
-                    <p className="text-sm text-gray-400">{event.date}</p>
-                  </div>
+                  <button className="text-gray-400 hover:text-white transition-colors duration-200">
+                    <MoreVertical className="h-5 w-5" />
+                  </button>
                 </div>
-                <button className="text-gray-400 hover:text-white transition-colors duration-200">
-                  <MoreVertical className="h-5 w-5" />
-                </button>
+                {event.imagePath && (
+                  <img
+                    src={`${process.env.REACT_APP_BACKEND_URL}${event.imagePath}`}
+                    alt={event.name}
+                    className="w-full h-56 object-cover"
+                  />
+                )}
+                <div className="p-5">
+                  <p className="text-gray-300 leading-relaxed">
+                    {event.description}
+                  </p>
+                </div>
               </div>
-              <img
-                src={paellaImage}
-                alt={event.name}
-                className="w-full h-56 object-cover"
-              />
-              <div className="p-5">
-                <p className="text-gray-300 leading-relaxed">{event.description}</p>
-              </div>
-            </div>
-          ))}
+            ))
+          ) : (
+            <p className="text-white text-center col-span-3">No events found.</p>
+          )}
         </div>
 
         {isModalOpen && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 backdrop-blur-sm z-50 rounded">
             <div className="bg-[#1E2B3D] rounded p-6 w-[480px] max-w-[95vw] mx-auto">
-              <h2 className="text-xl font-semibold mb-6 text-white">Create New Event</h2>
+              <h2 className="text-xl font-semibold mb-6 text-white">
+                Create New Event
+              </h2>
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="form-group">
                   <label className="block text-sm text-gray-300 mb-1.5">
@@ -92,31 +160,37 @@ const EventPage = () => {
                   </label>
                   <input
                     type="text"
+                    name="name"
                     required
                     className="form-input w-full bg-[#131B2A] border border-gray-700/50 rounded text-white text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-500"
                     placeholder="Enter event name"
                   />
                 </div>
+
                 <div className="form-group">
                   <label className="block text-sm text-gray-300 mb-1.5">
                     Description
                   </label>
                   <textarea
                     rows="3"
+                    name="description"
                     className="form-textarea w-full bg-[#131B2A] border border-gray-700/50 rounded text-white text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-500 resize-none"
                     placeholder="Enter event description"
                   ></textarea>
                 </div>
+
                 <div className="form-group">
                   <label className="block text-sm text-gray-300 mb-1.5">
                     Date
                   </label>
                   <input
                     type="date"
+                    name="date"
                     required
                     className="form-input w-full bg-[#131B2A] border border-gray-700/50 rounded text-white text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
+
                 <div className="form-group">
                   <label className="block text-sm text-gray-300 mb-1.5">
                     Event Image
@@ -142,6 +216,7 @@ const EventPage = () => {
                           <span>Upload a file</span>
                           <input
                             type="file"
+                            name="image"
                             className="sr-only"
                             accept="image/*"
                             onChange={handleImageChange}
@@ -164,15 +239,20 @@ const EventPage = () => {
                     </div>
                   )}
                 </div>
+
                 <div className="form-group flex items-center">
                   <input
                     type="checkbox"
+                    name="isOnline"
                     checked={isOnline}
                     onChange={(e) => setIsOnline(e.target.checked)}
                     className="form-checkbox h-4 w-4 text-blue-500 border-gray-700/50 rounded bg-[#131B2A] focus:ring-blue-500 focus:ring-offset-0"
                   />
-                  <span className="ml-2 text-sm text-gray-300">Online Event</span>
+                  <span className="ml-2 text-sm text-gray-300">
+                    Online Event
+                  </span>
                 </div>
+
                 {isOnline && (
                   <div className="form-group">
                     <label className="block text-sm text-gray-300 mb-1.5">
@@ -180,11 +260,13 @@ const EventPage = () => {
                     </label>
                     <input
                       type="url"
+                      name="zoomLink"
                       className="form-input w-full bg-[#131B2A] border border-gray-700/50 rounded text-white text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-500"
                       placeholder="https://zoom.us/j/..."
                     />
                   </div>
                 )}
+
                 <div className="flex justify-end gap-3 pt-2">
                   <button
                     type="button"
@@ -210,3 +292,4 @@ const EventPage = () => {
 };
 
 export default EventPage;
+

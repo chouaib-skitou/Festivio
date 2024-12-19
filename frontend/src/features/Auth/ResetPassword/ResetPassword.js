@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import axiosInstance from '../../../api/axiosInstance';
-import './ResetPassword.scss';
 
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
@@ -10,7 +9,7 @@ const ResetPassword = () => {
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { id: token } = useParams(); // Extract the token from the URL
+  const { id: token } = useParams();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -30,8 +29,6 @@ const ResetPassword = () => {
         confirmPassword,
       });
       setMessage(response.data.message || 'Password successfully changed.');
-
-      // Navigate to login page immediately upon success
       navigate('/login');
     } catch (err) {
       if (err.response) {
@@ -44,56 +41,54 @@ const ResetPassword = () => {
     }
   };
 
+  const inputClasses = "w-full px-3 py-2 bg-transparent border-b border-gray-200 focus:border-blue-500 focus:outline-none text-gray-700 placeholder-gray-500";
+
   return (
-    <div className="login-container">
-      <div className="login-card">
-        <div className="login-header">
-          <h1>Reset Password</h1>
-          <p>Please enter your new password.</p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="max-w-md w-full bg-white rounded-lg shadow-sm p-8 space-y-6">
+        <div className="text-center">
+          <h2 className="text-2xl font-semibold text-gray-900">Reset Password</h2>
+          <p className="mt-2 text-sm text-gray-600">Please enter your new password.</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="login-form">
-          {error && (
-            <div className="error-message">
-              {error}
-            </div>
-          )}
-          {message && (
-            <div className="error-message" style={{ backgroundColor: '#e7f4e4', color: '#34A853' }}>
-              {message}
-            </div>
-          )}
+        {error && (
+          <div className="p-4 rounded-md bg-red-50 text-red-700">
+            {error}
+          </div>
+        )}
+        {message && (
+          <div className="p-4 rounded-md bg-green-50 text-green-700">
+            {message}
+          </div>
+        )}
 
-          <div className="form-group">
-            <label htmlFor="password" className="sr-only">New Password</label>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
             <input
-              id="password"
               type="password"
+              placeholder="New Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="New Password"
               required
-              className="form-input"
+              className={inputClasses}
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="confirmPassword" className="sr-only">Confirm Password</label>
+          <div>
             <input
-              id="confirmPassword"
               type="password"
+              placeholder="Confirm Password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm Password"
               required
-              className="form-input"
+              className={inputClasses}
             />
           </div>
 
           <button
             type="submit"
             disabled={isLoading}
-            className="sign-in-button"
+            className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
           >
             {isLoading ? 'Updating...' : 'Change Password'}
           </button>

@@ -7,6 +7,7 @@ const {
   patchEvent,
 } = require('../controllers/eventController');
 const authMiddleware = require('../middlewares/authMiddleware');
+const upload = require('../middlewares/uploadMiddleware');
 
 const router = express.Router();
 
@@ -56,7 +57,7 @@ const router = express.Router();
  *       500:
  *         description: Internal server error
  */
-router.post('/', authMiddleware, createEvent);
+router.post('/', authMiddleware, upload.single('image'), createEvent);
 
 /**
  * @swagger

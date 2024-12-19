@@ -8,11 +8,15 @@ const nodemailer = require('nodemailer');
 const UserDTO = require('../dtos/UserDTO');
 
 // Helper functions to generate tokens
-const generateAccessToken = (userId) =>
-  jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '15m' });
+// Generate access token with userId and role
+const generateAccessToken = (userId, role) =>
+  jwt.sign({ userId, role }, process.env.JWT_SECRET, { expiresIn: '3d' });
 
-const generateRefreshToken = (userId) =>
-  jwt.sign({ userId }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+// Generate refresh token with userId and role
+const generateRefreshToken = (userId, role) =>
+  jwt.sign({ userId, role }, process.env.JWT_REFRESH_SECRET, { expiresIn: '30d' });
+
+
 
 const generateEmailToken = (userId) =>
   jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '1d' });
@@ -149,9 +153,9 @@ exports.login = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
-    // Generate tokens
-    const token = generateAccessToken(user._id);
-    const refreshToken = generateRefreshToken(user._id);
+    // Generate tokens with role
+    const token = generateAccessToken(user._id, user.role);
+    const refreshToken = generateRefreshToken(user._id, user.role);
 
     res.json({ user: new UserDTO(user), token, refreshToken });
   } catch (error) {
@@ -159,6 +163,8 @@ exports.login = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+
 
 // Refresh Token
 exports.refreshToken = (req, res) => {
