@@ -1,7 +1,20 @@
-// controllers/eventController.js
+const axios = require('axios');
 const Event = require('../models/Event');
 const EventDTO = require('../dtos/EventDTO');
-const upload = require('../middlewares/uploadMiddleware');
+
+// Upload image to Imgur
+const uploadToImgur = async (file) => {
+  const formData = new FormData();
+  formData.append('image', file.buffer.toString('base64')); // Convert file to base64
+
+  const response = await axios.post('https://api.imgur.com/3/image', formData, {
+    headers: {
+      Authorization: `Client-ID ${process.env.IMGUR_CLIENT_ID}`, // Use your Client ID from .env
+    },
+  });
+
+  return response.data.data.link; // Return the Imgur image link
+};
 
 // Create an event
 exports.createEvent = async (req, res) => {
@@ -11,7 +24,6 @@ exports.createEvent = async (req, res) => {
     console.log('Decoded User:', req.user);
     console.log('Request Body:', req.body);
 
-    // Ensure required fields exist
     if (!req.user) {
       return res.status(403).json({ message: 'User information missing in request' });
     }
@@ -20,17 +32,18 @@ exports.createEvent = async (req, res) => {
       return res.status(400).json({ message: 'Organizer ID is required' });
     }
 
-    // Role validation
     if (req.user.role !== 'ROLE_ORGANIZER_ADMIN' && req.user.role !== 'ROLE_ADMIN') {
       return res.status(403).json({ message: 'Access denied: Invalid role' });
     }
 
-    // Ensure organizer matches the logged-in user
     if (organizer.toString() !== req.user.userId.toString()) {
       return res.status(403).json({ message: 'Access denied: Organizer ID mismatch' });
     }
 
-    const imagePath = req.file ? `images/${req.file.filename}` : null;
+    let imageUrl = null;
+    if (req.file) {
+      imageUrl = await uploadToImgur(req.file);
+    }
 
     const event = new Event({
       name,
@@ -40,7 +53,7 @@ exports.createEvent = async (req, res) => {
       participants,
       isOnline,
       zoomLink,
-      imagePath,
+      imagePath: imageUrl, // Save the Imgur image URL
     });
 
     await event.save();
@@ -54,6 +67,7 @@ exports.createEvent = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
 
 
 
