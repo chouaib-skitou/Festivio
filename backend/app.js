@@ -39,15 +39,12 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
 // CORS setup
 app.use(
   cors({
-    origin: [
-      'https://festivio-h5wv.vercel.app', // Frontend URL
-      'https://festivio-nine.vercel.app', // Backend URL (optional, if needed for testing)
-    ],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    origin: '*', // Autorise toutes les origines
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], // Inclut PATCH
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true, // Allow cookies/auth headers
   })
 );
+
 
 // Handle preflight requests for all routes
 app.options('*', cors());
