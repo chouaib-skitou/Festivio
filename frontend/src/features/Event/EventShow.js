@@ -61,7 +61,7 @@ const EventShow = () => {
         <div className="bg-[#1E293B] rounded-2xl overflow-hidden shadow-lg">
           {event.imagePath && (
             <img
-              src={`${process.env.REACT_APP_BACKEND_URL}${event.imagePath}`}
+              src={event.imagePath}
               alt={event.name}
               className="w-full h-64 object-cover"
             />
