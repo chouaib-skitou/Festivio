@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import "./EventPage.scss";
+import { useNavigate } from "react-router-dom";
 import { MoreVertical } from 'lucide-react';
 import axiosInstance from "../../api/axiosInstance";
 import useAuthStore from "../../stores/authStore";
@@ -11,6 +11,7 @@ const EventPage = () => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchEvents();
@@ -29,6 +30,15 @@ const EventPage = () => {
       console.error("Error fetching events:", error);
       setError("Failed to load events. Please try again later.");
       setIsLoading(false);
+    }
+  };
+
+  const handleParticipate = async (eventId) => {
+    try {
+      await axiosInstance.post(`/api/events/${eventId}/participate`);
+      // You might want to show a success message or update the UI
+    } catch (error) {
+      console.error("Error participating in event:", error);
     }
   };
 
@@ -106,39 +116,61 @@ const EventPage = () => {
                 key={event.id}
                 className="bg-[#1E293B] rounded-xl overflow-hidden shadow-lg transition-transform duration-200 hover:transform hover:scale-[1.02]"
               >
-                <div className="p-5 flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="w-10 h-10 rounded-full bg-[#EF4444] flex items-center justify-center text-white font-semibold">
-                      {event.organizer && typeof event.organizer === 'string' ? event.organizer[0] : 'E'}
+                <div 
+                  className="cursor-pointer"
+                  onClick={() => navigate(`/events/${event.id}`)}
+                >
+                  <div className="p-5 flex items-center justify-between">
+                    <div className="flex items-center">
+                      <div className="w-10 h-10 rounded-full bg-[#EF4444] flex items-center justify-center text-white font-semibold">
+                        {event.organizer && typeof event.organizer === 'string' ? event.organizer[0] : 'E'}
+                      </div>
+                      <div className="ml-4">
+                        <h2 className="text-lg font-semibold text-white">
+                          {event.name}
+                        </h2>
+                        <p className="text-sm text-gray-400">
+                          {new Date(event.date).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                        </p>
+                      </div>
                     </div>
-                    <div className="ml-4">
-                      <h2 className="text-lg font-semibold text-white">
-                        {event.name}
-                      </h2>
-                      <p className="text-sm text-gray-400">
-                        {new Date(event.date).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
-                      </p>
-                    </div>
+                    <button 
+                      className="text-gray-400 hover:text-white transition-colors duration-200"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Handle more options click
+                      }}
+                    >
+                      <MoreVertical className="h-5 w-5" />
+                    </button>
                   </div>
-                  <button className="text-gray-400 hover:text-white transition-colors duration-200">
-                    <MoreVertical className="h-5 w-5" />
-                  </button>
+                  {event.imagePath && (
+                    <img
+                      src={`${process.env.REACT_APP_BACKEND_URL}${event.imagePath}`}
+                      alt={event.name}
+                      className="w-full h-56 object-cover"
+                    />
+                  )}
+                  <div className="p-5">
+                    <p className="text-gray-300 leading-relaxed mb-4">
+                      {event.description}
+                    </p>
+                  </div>
                 </div>
-                {event.imagePath && (
-                  <img
-                    src={`${process.env.REACT_APP_BACKEND_URL}${event.imagePath}`}
-                    alt={event.name}
-                    className="w-full h-56 object-cover"
-                  />
-                )}
-                <div className="p-5">
-                  <p className="text-gray-300 leading-relaxed">
-                    {event.description}
-                  </p>
+                <div className="px-5 pb-5">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleParticipate(event.id);
+                    }}
+                    className="w-full bg-[#3B82F6] hover:bg-[#2563EB] text-white font-medium py-2 rounded transition-colors duration-200"
+                  >
+                    Participate
+                  </button>
                 </div>
               </div>
             ))
@@ -292,4 +324,3 @@ const EventPage = () => {
 };
 
 export default EventPage;
-
