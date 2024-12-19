@@ -10,8 +10,6 @@ const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const fs = require('fs');
 const path = require('path');
-const fs = require('fs');
-const path = require('path');
 
 // Load environment variables
 dotenv.config({ path: '.env' });
@@ -41,10 +39,13 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
 // CORS setup
 app.use(
   cors({
-    origin: FRONTEND_URL.replace(/\/$/, ''), // Ensure no trailing slash
+    origin: [
+      'https://festivio-h5wv.vercel.app', // Frontend URL
+      'https://festivio-nine.vercel.app', // Backend URL (optional, if needed for testing)
+    ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
+    credentials: true, // Allow cookies/auth headers
   })
 );
 
