@@ -8,8 +8,8 @@ const eventRoutes = require('./routes/eventRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
-const fs = require('fs');
-const path = require('path');
+// const fs = require('fs');
+// const path = require('path');
 
 // Load environment variables
 dotenv.config({ path: '.env' });
@@ -23,14 +23,14 @@ const app = express();
 app.use(express.json());
 
 // Serve static files (e.g., images)
-app.use('/images', express.static('public/images'));
+// app.use('/images', express.static('public/images'));
 
-// Ensure 'public/images' directory exists
-const uploadDir = path.join(__dirname, 'public', 'images');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-  console.log('Created upload directory:', uploadDir);
-}
+// // Ensure 'public/images' directory exists
+// const uploadDir = path.join(__dirname, 'public', 'images');
+// if (!fs.existsSync(uploadDir)) {
+//   fs.mkdirSync(uploadDir, { recursive: true });
+//   console.log('Created upload directory:', uploadDir);
+// }
 
 // Environment variables
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
