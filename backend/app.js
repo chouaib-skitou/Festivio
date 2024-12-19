@@ -33,18 +33,22 @@ if (!fs.existsSync(uploadDir)) {
 }
 
 // Environment variables
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+// const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
 
 // CORS setup
 app.use(
   cors({
-    origin: FRONTEND_URL.replace(/\/$/, ''), // Ensure no trailing slash
+    origin: [
+      'https://festivio-h5wv.vercel.app', // Frontend URL
+      'https://festivio-nine.vercel.app', // Backend URL 
+    ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
+    credentials: true, // Allow cookies/auth headers
   })
 );
+
 
 // Handle preflight requests for all routes
 app.options('*', cors());
