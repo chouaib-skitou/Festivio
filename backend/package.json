@@ -1,5 +1,5 @@
 {
-  "name": "rest_api",
+  "name": "Festivio",
   "version": "1.0.0",
   "description": "Node.js and Express backend with MongoDB",
   "main": "server.js",
@@ -11,6 +11,7 @@
     "test": "jest"
   },
   "dependencies": {
+    "axios": "^1.7.9",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

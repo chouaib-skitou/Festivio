@@ -10,7 +10,11 @@ const {
   getEventById
 } = require('../controllers/eventController');
 const authMiddleware = require('../middlewares/authMiddleware');
-const upload = require('../middlewares/uploadMiddleware');
+const multer = require('multer');
+
+// Use memory storage for multer
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 const router = express.Router();
 
@@ -33,7 +37,7 @@ const router = express.Router();
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
@@ -52,6 +56,10 @@ const router = express.Router();
  *                 items:
  *                   type: string
  *                   description: User IDs of participants
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Event image file
  *     responses:
  *       201:
  *         description: Event created successfully
