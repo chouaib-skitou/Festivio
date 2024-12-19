@@ -185,7 +185,7 @@ const EventPage = () => {
                   </div>
                   {event.imagePath && (
                     <img
-                      src={`${process.env.REACT_APP_BACKEND_URL}${event.imagePath}`}
+                      src={event.imagePath}
                       alt={event.name}
                       className="w-full h-56 object-cover"
                     />
