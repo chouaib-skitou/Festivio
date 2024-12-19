@@ -5,6 +5,7 @@ on:
     branches:
     - master
     - feature/setup_actions
+    - feature/event_show_connection
   pull_request:
     branches:
     - master
