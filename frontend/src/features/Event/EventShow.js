@@ -1,48 +1,71 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import AddTaskModal from './AddTaskModal';
 import './EventShow.scss';
-import paellaImage from '../../media/images/paella.jpg';
+import axiosInstance from '../../api/axiosInstance';
 
 const EventShow = () => {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState("participants");
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
+  const [event, setEvent] = useState(null);
+  const [participants, setParticipants] = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Placeholder data
-  const event = {
-    id: id,
-    name: "Sample Event",
-    description: "This is a detailed description of the event. It includes all the necessary information about what will happen during the event, who should attend, and what to expect.",
-    date: "2024-01-20",
-    imagePath: paellaImage,
-    isOnline: true,
-    zoomLink: "https://zoom.us/j/123456789",
-    location: "Online",
+  useEffect(() => {
+    const fetchEventData = async () => {
+      try {
+        const response = await axiosInstance.get(`/api/events/${id}`);
+        setEvent(response.data.event);
+        setParticipants(response.data.event.participants || []);
+        setTasks(response.data.event.tasks || []);
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error fetching event data:", error);
+        setError("Failed to load event data. Please try again later.");
+        setIsLoading(false);
+      }
+    };
+
+    fetchEventData();
+  }, [id]);
+
+  const addTask = (newTask) => {
+    setTasks((prevTasks) => [...prevTasks, newTask]);
   };
 
-  const participants = [
-    { id: 1, name: "John Doe", email: "john@example.com" },
-    { id: 2, name: "Jane Smith", email: "jane@example.com" },
-    { id: 3, name: "Bob Johnson", email: "bob@example.com" },
-  ];
+  if (isLoading) {
+    return <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
+      <p className="text-white text-xl">Loading event details...</p>
+    </div>;
+  }
 
-  const tasks = [
-    { id: 1, title: "Prepare presentation", description: "Create slides for the main topic", status: "In Progress", assignedTo: "John Doe" },
-    { id: 2, title: "Setup virtual room", description: "Configure Zoom settings and test audio", status: "Completed", assignedTo: "Jane Smith" },
-    { id: 3, title: "Send invitations", description: "Email all participants with event details", status: "Pending", assignedTo: "Bob Johnson" },
-  ];
+  if (error) {
+    return <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
+      <p className="text-red-500 text-xl">{error}</p>
+    </div>;
+  }
+
+  if (!event) {
+    return <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
+      <p className="text-white text-xl">Event not found.</p>
+    </div>;
+  }
 
   return (
     <div className="min-h-screen bg-[#0F172A] pt-16">
       <div className="container mx-auto px-6 py-8">
         <div className="bg-[#1E293B] rounded-2xl overflow-hidden shadow-lg">
-          <img
-            src={event.imagePath}
-            alt={event.name}
-            className="w-full h-64 object-cover"
-          />
+          {event.imagePath && (
+            <img
+              src={`${process.env.REACT_APP_BACKEND_URL}${event.imagePath}`}
+              alt={event.name}
+              className="w-full h-64 object-cover"
+            />
+          )}
           
           <div className="p-6">
             <h1 className="text-2xl font-bold text-white mb-2">{event.name}</h1>
@@ -54,12 +77,12 @@ const EventShow = () => {
                   day: "numeric",
                 })}
               </span>
-              <span>{event.location}</span>
+              <span>{event.location || (event.isOnline ? 'Online' : 'N/A')}</span>
             </div>
             
             <p className="text-gray-300 mb-6">{event.description}</p>
             
-            {event.isOnline && (
+            {event.isOnline && event.zoomLink && (
               <div className="bg-[#0F172A] p-4 rounded-2xl mb-6">
                 <h3 className="text-white font-semibold mb-2">Zoom Meeting</h3>
                 <a 
@@ -94,11 +117,11 @@ const EventShow = () => {
                     <div className="grid gap-4">
                       {participants.map((participant) => (
                         <div 
-                          key={participant.id}
+                          key={participant._id}
                           className="bg-[#0F172A] p-4 rounded-lg flex items-center justify-between"
                         >
                           <div>
-                            <h4 className="text-white font-medium">{participant.name}</h4>
+                            <h4 className="text-white font-medium">{`${participant.firstName} ${participant.lastName}`}</h4>
                             <p className="text-gray-400 text-sm">{participant.email}</p>
                           </div>
                         </div>
@@ -122,7 +145,7 @@ const EventShow = () => {
                     <div className="grid gap-4">
                       {tasks.map((task) => (
                         <div 
-                          key={task.id}
+                          key={task._id}
                           className="bg-[#0F172A] p-4 rounded-2xl"
                         >
                           <div className="flex justify-between items-start mb-2">
@@ -136,7 +159,7 @@ const EventShow = () => {
                             </span>
                           </div>
                           <p className="text-gray-400 text-sm mb-2">{task.description}</p>
-                          <p className="text-sm text-gray-500">Assigned to: {task.assignedTo}</p>
+                          <p className="text-sm text-gray-500">Assigned to: {task.assignedTo ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}` : 'Unassigned'}</p>
                         </div>
                       ))}
                     </div>
@@ -153,6 +176,7 @@ const EventShow = () => {
         onClose={() => setIsAddTaskModalOpen(false)}
         eventId={id}
         participants={participants}
+        onTaskAdded={addTask}
       />
     </div>
   );

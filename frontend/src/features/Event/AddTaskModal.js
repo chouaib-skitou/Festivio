@@ -1,20 +1,73 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import './AddTaskModal.scss';
+import axiosInstance from '../../api/axiosInstance';
 
-const AddTaskModal = ({ isOpen, onClose, eventId, participants }) => {
+const AddTaskModal = ({ isOpen, onClose, eventId, onTaskAdded }) => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
+    status: 'Pending',
     assignedTo: '',
-    status: 'Pending'
   });
+  const [organizers, setOrganizers] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  const handleSubmit = (e) => {
+  useEffect(() => {
+    if (isOpen) {
+      fetchOrganizers();
+    }
+  }, [isOpen]);
+
+  const fetchOrganizers = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await axiosInstance.get('/api/users?role=ROLE_ORGANIZER');
+      setOrganizers(response.data);
+    } catch (err) {
+      console.error('Error fetching organizers:', err);
+      setError('Failed to load organizers. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Here you would typically make an API call to create the task
-    console.log('Creating task:', { ...formData, eventId });
-    onClose();
+    setIsLoading(true);
+    setError(null);
+    try {
+      const taskData = {
+        ...formData,
+        event: eventId,
+      };
+
+      console.log('Submitting task data:', taskData);
+      const response = await axiosInstance.post('/api/tasks', taskData);
+      console.log('Server response:', response.data);
+      onTaskAdded(response.data.task); // Call the onTaskAdded function with the new task
+      onClose(); // Close modal on success
+      // Reset form data
+      setFormData({
+        title: '',
+        description: '',
+        status: 'Pending',
+        assignedTo: '',
+      });
+    } catch (err) {
+      console.error('Error creating task:', err);
+      if (err.response) {
+        console.error('Response data:', err.response.data);
+        setError(err.response.data.message || 'Failed to create task. Please try again.');
+      } else {
+        console.error('Error:', err.message);
+        setError('An unexpected error occurred. Please try again.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -28,6 +81,12 @@ const AddTaskModal = ({ isOpen, onClose, eventId, participants }) => {
             <X className="w-6 h-6" />
           </button>
         </div>
+
+        {error && (
+          <div className="px-6 py-2 bg-red-500 text-white text-sm rounded-md mb-4">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div className="space-y-2">
@@ -66,14 +125,17 @@ const AddTaskModal = ({ isOpen, onClose, eventId, participants }) => {
               value={formData.assignedTo}
               onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
               className="w-full bg-[#0F172A] border border-gray-700 rounded-xl py-2 px-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={isLoading}
+              required
             >
-              <option value="">Select a person</option>
-              {participants.map((participant) => (
-                <option key={participant.id} value={participant.id.toString()}>
-                  {participant.name}
+              <option value="">Select an organizer</option>
+              {organizers.map((organizer) => (
+                <option key={organizer.id} value={organizer.id}>
+                  {organizer.fullName}
                 </option>
               ))}
             </select>
+            {isLoading && <p className="text-sm text-gray-400">Loading organizers...</p>}
           </div>
 
           <div className="space-y-2">
@@ -105,6 +167,7 @@ const AddTaskModal = ({ isOpen, onClose, eventId, participants }) => {
             <button
               type="submit"
               className="px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors duration-200"
+              disabled={isLoading}
             >
               Add Task
             </button>
