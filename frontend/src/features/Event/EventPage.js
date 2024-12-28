@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import "./EventPage.scss";
 import { MoreVertical } from 'lucide-react';
 import axiosInstance from "../../api/axiosInstance";
-import useAuthStore from "../../stores/authStore";
 
 const EventPage = () => {
   const [events, setEvents] = useState([]);

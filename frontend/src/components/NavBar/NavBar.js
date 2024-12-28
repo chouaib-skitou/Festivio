@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Play, ChevronDown } from 'lucide-react';
+import { Play } from 'lucide-react';
 import useAuthStore from '../../stores/authStore';
 import './NavBar.scss';
 
