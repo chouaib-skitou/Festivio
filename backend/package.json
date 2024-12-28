@@ -1,5 +1,5 @@
 {
-  "name": "rest_api",
+  "name": "Festivio",
   "version": "1.0.0",
   "description": "Node.js and Express backend with MongoDB",
   "main": "server.js",
@@ -7,9 +7,11 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test": "jest"
   },
   "dependencies": {
+    "axios": "^1.7.9",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
@@ -27,7 +29,9 @@
     "eslint-plugin-react": "^7.37.2",
     "globals": "^15.13.0",
     "nodemon": "^3.1.7",
-    "prettier": "^3.4.2"
+    "prettier": "^3.4.2",
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0"
   },
   "author": "",
   "license": "ISC"

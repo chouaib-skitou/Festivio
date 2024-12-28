@@ -43,12 +43,12 @@ const NavBar = () => {
           >
             Home
           </Link>
-          <Link 
+          {/* <Link 
             to="/services" 
             className={`nav-link ${location.pathname === '/services' ? 'active' : ''}`}
           >
             Services
-          </Link>
+          </Link> */}
 
           {/* Conditional Rendering for Auth */}
           {accessToken ? (

@@ -5,9 +5,16 @@ const {
   updateEvent,
   deleteEvent,
   patchEvent,
+  participateInEvent,
+  unparticipateEvent,
+  getEventById
 } = require('../controllers/eventController');
 const authMiddleware = require('../middlewares/authMiddleware');
-const upload = require('../middlewares/uploadMiddleware');
+const multer = require('multer');
+
+// Use memory storage for multer
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 const router = express.Router();
 
@@ -30,7 +37,7 @@ const router = express.Router();
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
@@ -49,6 +56,10 @@ const router = express.Router();
  *                 items:
  *                   type: string
  *                   description: User IDs of participants
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: Event image file
  *     responses:
  *       201:
  *         description: Event created successfully
@@ -195,5 +206,91 @@ router.patch('/:id', authMiddleware, patchEvent);
  *         description: Internal server error
  */
 router.delete('/:id', authMiddleware, deleteEvent);
+
+/**
+ * @swagger
+ * /api/events/{id}/participate:
+ *   post:
+ *     summary: Participate in an event
+ *     description: Adds the logged-in user as a participant to the specified event.
+ *     tags: [Events]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Event ID
+ *     responses:
+ *       200:
+ *         description: Successfully added the user as a participant
+ *       404:
+ *         description: Event not found
+ *       403:
+ *         description: Access denied
+ *       500:
+ *         description: Internal server error
+ */
+router.post('/:id/participate', authMiddleware, participateInEvent);
+
+/**
+ * @swagger
+ * /api/events/{id}/unparticipate:
+ *   post:
+ *     summary: Unparticipate from an event
+ *     description: Remove the logged-in user from the participants of the event.
+ *     tags: [Events]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Event ID
+ *     responses:
+ *       200:
+ *         description: Unparticipated successfully
+ *       404:
+ *         description: Event not found
+ *       400:
+ *         description: User not participating
+ *       500:
+ *         description: Server error
+ */
+router.post('/:id/unparticipate', authMiddleware, unparticipateEvent);
+
+
+/**
+ * @swagger
+ * /api/events/{id}:
+ *   get:
+ *     summary: Get an event by ID
+ *     description: Fetch details of a single event by its ID.
+ *     tags: [Events]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: Event ID
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved the event
+ *       404:
+ *         description: Event not found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/:id', authMiddleware, getEventById);
+
+
+
 
 module.exports = router;

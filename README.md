@@ -87,6 +87,28 @@ Festivio is an event planning application designed to streamline the organizatio
      ```
    - The backend will start at [http://localhost:5000](http://localhost:5000).
 
+### Imgur API Setup
+
+1. **Create an Imgur Account**:
+   - Go to [Imgur's website](https://imgur.com/) and create an account if you don’t have one.
+
+2. **Register an Application**:
+   - Visit the [Imgur API registration page](https://api.imgur.com/oauth2/addclient).
+   - Select **OAuth 2 without callback URL** as the application type.
+   - Fill in the required details like your application name and description.
+   - Submit the form to generate your **Client ID** and **Client Secret**.
+
+3. **Configure Environment Variables**:
+   - Add the following variables to your `.env` file:
+     ```env
+     IMGUR_CLIENT_ID=<your_imgur_client_id>
+     IMGUR_CLIENT_SECRET=<your_imgur_client_secret>
+     ```
+   - Replace `<your_imgur_client_id>` and `<your_imgur_client_secret>` with the credentials generated in step 2.
+
+4. **Verify the Setup**:
+   - The backend will automatically use these environment variables to upload images to Imgur.
+
 ### Frontend Setup
 
 1. **Backend URL Configuration**:

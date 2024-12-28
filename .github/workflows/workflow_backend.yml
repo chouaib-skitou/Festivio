@@ -1,13 +1,17 @@
-name : CI/CD pipeline
+name : Workflow backend
 
 on:
   push: 
     branches:
     - master
     - feature/setup_actions
+    - feature/event_show_connection
+    - develop
+    - feature/tests
   pull_request:
     branches:
     - master
+    - develop
 env:
   Backend_dir: /home/runner/work/Festivio/Festivio/backend
 
@@ -37,3 +41,7 @@ jobs:
         run: |
           cd ${{ env.Backend_dir }}
           npm run format
+      - name: Run tests
+        run: |
+          cd ${{ env.Backend_dir }}
+          npm run test
