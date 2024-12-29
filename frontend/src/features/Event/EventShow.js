@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import AddTaskModal from './AddTaskModal';
+import DeleteTaskModal from './DeleteTaskModal';
 import './EventShow.scss';
 import axiosInstance from '../../api/axiosInstance';
 
@@ -9,6 +10,8 @@ const EventShow = () => {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState("participants");
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false);
+  const [isDeleteTaskModalOpen, setIsDeleteTaskModalOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState(null);
   const [event, setEvent] = useState(null);
   const [participants, setParticipants] = useState([]);
   const [tasks, setTasks] = useState([]);
@@ -33,26 +36,53 @@ const EventShow = () => {
     fetchEventData();
   }, [id]);
 
-  const addTask = (newTask) => {
-    setTasks((prevTasks) => [...prevTasks, newTask]);
+  const addTask = async (newTask) => {
+    try {
+      setTasks((prevTasks) => [...prevTasks, newTask]);
+      const response = await axiosInstance.get(`/api/events/${id}`);
+      setTasks(response.data.event.tasks || []);
+    } catch (error) {
+      console.error("Error adding task:", error);
+    }
+  };
+
+  const handleDeleteTask = async (taskId) => {
+    try {
+      const response = await axiosInstance.delete(`/api/tasks/${taskId}`);
+      if (response.status === 200) {
+        const updatedEvent = await axiosInstance.get(`/api/events/${id}`);
+        setTasks(updatedEvent.data.event.tasks || []);
+      } else {
+        alert("Failed to delete task. Please try again.");
+      }
+    } catch (error) {
+      console.error("Failed to delete task:", error);
+      alert("An error occurred while deleting the task. Please try again.");
+    }
   };
 
   if (isLoading) {
-    return <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
-      <p className="text-white text-xl">Loading event details...</p>
-    </div>;
+    return (
+      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
+        <p className="text-white text-xl">Loading event details...</p>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
-      <p className="text-red-500 text-xl">{error}</p>
-    </div>;
+    return (
+      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
+        <p className="text-red-500 text-xl">{error}</p>
+      </div>
+    );
   }
 
   if (!event) {
-    return <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
-      <p className="text-white text-xl">Event not found.</p>
-    </div>;
+    return (
+      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
+        <p className="text-white text-xl">Event not found.</p>
+      </div>
+    );
   }
 
   return (
@@ -66,7 +96,7 @@ const EventShow = () => {
               className="w-full h-64 object-cover"
             />
           )}
-          
+
           <div className="p-6">
             <h1 className="text-2xl font-bold text-white mb-2">{event.name}</h1>
             <div className="flex items-center text-gray-400 mb-4">
@@ -79,9 +109,9 @@ const EventShow = () => {
               </span>
               <span>{event.location || (event.isOnline ? 'Online' : 'N/A')}</span>
             </div>
-            
+
             <p className="text-gray-300 mb-6">{event.description}</p>
-            
+
             {event.isOnline && event.zoomLink && (
               <div className="bg-[#0F172A] p-4 rounded-2xl mb-6">
                 <h3 className="text-white font-semibold mb-2">Zoom Meeting</h3>
@@ -110,7 +140,6 @@ const EventShow = () => {
               </div>
 
               <div className="tab-content mt-4">
-
                 {activeTab === 'participants' && (
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-white">Participants</h3>
@@ -159,7 +188,18 @@ const EventShow = () => {
                             </span>
                           </div>
                           <p className="text-gray-400 text-sm mb-2">{task.description}</p>
-                          <p className="text-sm text-gray-500">Assigned to: {task.assignedTo ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}` : 'Unassigned'}</p>
+                          <p className="text-sm text-gray-500">
+                            Assigned to: {task.assignedTo ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}` : 'Unassigned'}
+                          </p>
+                          <button 
+                            onClick={() => {
+                              setTaskToDelete(task);
+                              setIsDeleteTaskModalOpen(true);
+                            }} 
+                            className="mt-4 text-red-500 hover:text-red-700 transition-colors text-sm"
+                          >
+                            Delete Task
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -178,9 +218,15 @@ const EventShow = () => {
         participants={participants}
         onTaskAdded={addTask}
       />
+
+      <DeleteTaskModal 
+        isOpen={isDeleteTaskModalOpen}
+        onClose={() => setIsDeleteTaskModalOpen(false)}
+        onDelete={handleDeleteTask}
+        task={taskToDelete}
+      />
     </div>
   );
 };
 
 export default EventShow;
-
