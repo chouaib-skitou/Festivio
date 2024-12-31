@@ -51,6 +51,27 @@ Festivio is an event planning application designed to streamline the organizatio
    - Create a [MongoDB Atlas account](https://www.mongodb.com/cloud/atlas) or use an existing MongoDB instance.
    - Obtain the connection string and set it in the `.env` file as `MONGO_URI`.
 
+   - Import the initial collections located in `/backend/config/utils` using the following commands:
+     ```bash
+     mongoimport --uri="<your_mongodb_connection_string>" --collection=users --file=backend/config/utils/users.json --jsonArray
+     mongoimport --uri="<your_mongodb_connection_string>" --collection=tasks --file=backend/config/utils/tasks.json --jsonArray
+     mongoimport --uri="<your_mongodb_connection_string>" --collection=events --file=backend/config/utils/events.json --jsonArray
+     ```
+     Replace `<your_mongodb_connection_string>` with your MongoDB Atlas connection string.
+
+1. **Predefined User Accounts**:
+   - **ROLE_PARTICIPANT**:
+     - Email: `participant1@gmail.com`
+     - Password: `oganizer1`
+
+   - **ROLE_ORGANIZER_ADMIN**:
+     - Email: `oganizer_admin1@gmail.com`
+     - Password: `oganizer1`
+
+   - **ROLE_ORGANIZER**:
+     - Email: `oganizer1@gmail.com`
+     - Password: `oganizer1`
+
 2. **JWT Secrets**:
    - Generate secrets for `JWT_SECRET` and `JWT_REFRESH_SECRET` using the following command:
      ```bash

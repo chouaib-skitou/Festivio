@@ -1,91 +1,89 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Play, ChevronDown } from 'lucide-react';
+import { Play } from 'lucide-react';
 import useAuthStore from '../../stores/authStore';
 import './NavBar.scss';
 
 const NavBar = () => {
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const location = useLocation();
 
   const accessToken = useAuthStore((state) => state.accessToken);
+  const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
 
   const handleLogout = () => {
     logout();
   };
 
-  useEffect(() => {
-    const closeDropdown = (e) => {
-      if (!e.target.closest('.dropdown')) {
-        setIsDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('click', closeDropdown);
-    return () => document.removeEventListener('click', closeDropdown);
-  }, []);
+  const isOrganizer = user?.role === 'ROLE_ORGANIZER';
 
   return (
     <nav className="navbar">
-      <div className="navbar-content">
-        <div className="navbar-left">
-          <Link to="/" className="logo">
-            <Play className="logo-icon" />
-            <span>Flowbite</span>
-          </Link>
-        </div>
+      {/* Logo à gauche */}
+      <div className="navbar-left">
+        <Link to="/" className="logo">
+          <Play className="logo-icon" />
+          <span>Flowbite</span>
+        </Link>
+      </div>
 
-        <div className="navbar-right">
+      {/* Liens à droite */}
+      <div className="navbar-right">
         <Link 
-            to="/" 
-            className={`nav-link ${location.pathname === '/home' ? 'active' : ''}`}
-          >
-            Home
-          </Link>
-          {/* <Link 
-            to="/services" 
-            className={`nav-link ${location.pathname === '/services' ? 'active' : ''}`}
-          >
-            Services
-          </Link> */}
+          to="/" 
+          className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
+        >
+          Home
+        </Link>
+        <Link 
+          to="/services" 
+          className={`nav-link ${location.pathname === '/services' ? 'active' : ''}`}
+        >
+          Services
+        </Link>
 
-          {/* Conditional Rendering for Auth */}
-          {accessToken ? (
-            
-            <>
-            
+        {accessToken ? (
+          <>
+            {!isOrganizer && (
+              <Link 
+                to="/events" 
+                className={`nav-link ${location.pathname === '/events' ? 'active' : ''}`}
+              >
+                Events
+              </Link>
+            )}
+            {isOrganizer && (
+              <Link 
+                to="/tasks" 
+                className={`nav-link ${location.pathname === '/tasks' ? 'active' : ''}`}
+              >
+                Tasks
+              </Link>
+            )}
+            <button onClick={handleLogout} className="nav-link logout-button">
+              Logout
+            </button>
+          </>
+        ) : (
+          <>
             <Link 
-              to="/events" 
-              className={`nav-link ${location.pathname === '/home' ? 'active' : ''}`}
+              to="/login" 
+              className={`nav-link ${location.pathname === '/login' ? 'active' : ''}`}
             >
-              Events
+              Login
             </Link>
-              <button onClick={handleLogout} className="nav-link logout-button">
-                Logout
-              </button>
-            </>
-          ) : (
-            <>
-              <Link 
-                to="/login" 
-                className={`nav-link ${location.pathname === '/login' ? 'active' : ''}`}
-              >
-                Login
-              </Link>
-
-              <Link 
-                to="/register" 
-                className={`nav-link ${location.pathname === '/register' ? 'active' : ''}`}
-              >
-                Register
-              </Link>
-            </>
-          )}
-        </div>
+            <Link 
+              to="/register" 
+              className={`nav-link ${location.pathname === '/register' ? 'active' : ''}`}
+            >
+              Register
+            </Link>
+          </>
+        )}
       </div>
     </nav>
   );
 };
 
 export default NavBar;
+

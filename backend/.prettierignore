@@ -1,0 +1,4 @@
+# Ignore MongoDB export files
+config/utils/events.json
+config/utils/tasks.json
+config/utils/users.json
