@@ -50,15 +50,26 @@ exports.createTask = async (req, res) => {
 
 // Get all tasks
 exports.getAllTasks = async (req, res) => {
-    try {
-      const tasks = await Task.find(); // Retrieve all tasks from the database
+  try {
+
+      let tasks;
+
+      if (req.user.role === 'ROLE_ORGANIZER') {
+          // If the user is an organizer, get only their tasks
+          tasks = await Task.find({ assignedTo: req.user.userId });
+      } else {
+          // Otherwise, retrieve all tasks
+          tasks = await Task.find();
+      }
+
       const taskDTOs = tasks.map((task) => new TaskDTO(task)); // Map tasks to DTOs
-  
+
       res.status(200).json({ tasks: taskDTOs });
-    } catch (error) {
+  } catch (error) {
       res.status(500).json({ message: 'Server error', error: error.message });
-    }
-  };
+  }
+};
+
   
 
 // Update task
