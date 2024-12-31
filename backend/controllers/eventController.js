@@ -79,10 +79,10 @@ exports.getEvents = async (req, res) => {
     let events;
 
     // Check user role and fetch events accordingly
-    if (req.user.role === 'ROLE_ORGANIZER_ADMIN' || req.user.role === 'ROLE_PARTICIPANT') {
+    if (req.user.role === 'ROLE_ORGANIZER_ADMIN') {
       // Get events created by the user
       events = await Event.find({ organizer: req.user.userId }).populate('participants tasks');
-    } else if (req.user.role === 'ROLE_ADMIN') {
+    } else if (req.user.role === 'ROLE_ADMIN' || req.user.role === 'ROLE_PARTICIPANT') {
       // Get all events
       events = await Event.find().populate('participants tasks');
     }  else {
