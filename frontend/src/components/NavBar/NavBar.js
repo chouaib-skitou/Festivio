@@ -8,11 +8,14 @@ const NavBar = () => {
   const location = useLocation();
 
   const accessToken = useAuthStore((state) => state.accessToken);
+  const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
 
   const handleLogout = () => {
     logout();
   };
+
+  const isOrganizer = user?.role === 'ROLE_ORGANIZER';
 
   return (
     <nav className="navbar">
@@ -41,12 +44,22 @@ const NavBar = () => {
 
         {accessToken ? (
           <>
-            <Link 
-              to="/events" 
-              className={`nav-link ${location.pathname === '/events' ? 'active' : ''}`}
-            >
-              Events
-            </Link>
+            {!isOrganizer && (
+              <Link 
+                to="/events" 
+                className={`nav-link ${location.pathname === '/events' ? 'active' : ''}`}
+              >
+                Events
+              </Link>
+            )}
+            {isOrganizer && (
+              <Link 
+                to="/tasks" 
+                className={`nav-link ${location.pathname === '/tasks' ? 'active' : ''}`}
+              >
+                Tasks
+              </Link>
+            )}
             <button onClick={handleLogout} className="nav-link logout-button">
               Logout
             </button>
@@ -73,3 +86,4 @@ const NavBar = () => {
 };
 
 export default NavBar;
+
