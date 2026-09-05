@@ -1,100 +1,58 @@
 import React, { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import axiosInstance from '../../../api/axiosInstance';
 
 const ResetPassword = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { id: token } = useParams();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setError('');
-    setMessage('');
-    setIsLoading(true);
 
+    if (password.length < 10) {
+      setError('Password must contain at least 10 characters.');
+      return;
+    }
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
-      setIsLoading(false);
       return;
     }
 
+    setIsLoading(true);
     try {
-      const response = await axiosInstance.post(`/api/auth/reset-password/${token}`, {
-        newPassword: password,
-        confirmPassword,
-      });
-      setMessage(response.data.message || 'Password successfully changed.');
-      navigate('/login');
-    } catch (err) {
-      if (err.response) {
-        setError(err.response.data.message || 'An error occurred.');
-      } else {
-        setError('Unable to connect to the server.');
-      }
+      await axiosInstance.post(
+        `/api/auth/reset-password/${token}`,
+        { newPassword: password, confirmPassword },
+        { _skipAuthRefresh: true }
+      );
+      navigate('/login', { replace: true });
+    } catch (submitError) {
+      setError(submitError.response?.data?.message || 'Unable to reset your password.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const inputClasses = "w-full px-3 py-2 bg-transparent border-b border-gray-200 focus:border-blue-500 focus:outline-none text-gray-700 placeholder-gray-500";
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-sm p-8 space-y-6">
-        <div className="text-center">
-          <h2 className="text-2xl font-semibold text-gray-900">Reset Password</h2>
-          <p className="mt-2 text-sm text-gray-600">Please enter your new password.</p>
-        </div>
-
-        {error && (
-          <div className="p-4 rounded-md bg-red-50 text-red-700">
-            {error}
-          </div>
-        )}
-        {message && (
-          <div className="p-4 rounded-md bg-green-50 text-green-700">
-            {message}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <input
-              type="password"
-              placeholder="New Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className={inputClasses}
-            />
-          </div>
-
-          <div>
-            <input
-              type="password"
-              placeholder="Confirm Password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              className={inputClasses}
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-          >
-            {isLoading ? 'Updating...' : 'Change Password'}
-          </button>
+    <main className="auth-shell">
+      <section className="auth-card" aria-labelledby="reset-title">
+        <Link to="/" className="auth-brand">Festivio</Link>
+        <p className="eyebrow">Secure recovery</p>
+        <h1 id="reset-title">Choose a new password</h1>
+        <p className="auth-subtitle">Use at least 10 characters and avoid reusing a password from another service.</p>
+        {error && <div className="auth-alert auth-alert-error">{error}</div>}
+        <form onSubmit={handleSubmit} className="auth-form">
+          <label>New password<input type="password" autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
+          <label>Confirm password<input type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} required /></label>
+          <button type="submit" className="primary-button full-width" disabled={isLoading}>{isLoading ? 'Updating…' : 'Update password'}</button>
         </form>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 };
 

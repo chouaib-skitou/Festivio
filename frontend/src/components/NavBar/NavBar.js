@@ -1,89 +1,71 @@
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { Play } from 'lucide-react';
+import React, { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { CalendarDays, Menu, X } from 'lucide-react';
+import axiosInstance from '../../api/axiosInstance';
 import useAuthStore from '../../stores/authStore';
 import './NavBar.scss';
 
 const NavBar = () => {
+  const [open, setOpen] = useState(false);
   const location = useLocation();
-
+  const navigate = useNavigate();
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
-  const logout = useAuthStore((state) => state.logout);
+  const clearSession = useAuthStore((state) => state.clearSession);
 
-  const handleLogout = () => {
-    logout();
+  const close = () => setOpen(false);
+  const active = (path) => (location.pathname === path ? 'active' : '');
+
+  const handleLogout = async () => {
+    try {
+      await axiosInstance.post('/api/auth/logout', undefined, { _skipAuthRefresh: true });
+    } finally {
+      clearSession();
+      close();
+      navigate('/', { replace: true });
+    }
   };
 
-  const isOrganizer = user?.role === 'ROLE_ORGANIZER';
+  const workspaceLinks = [];
+  if (['ROLE_ADMIN', 'ROLE_ORGANIZER_ADMIN', 'ROLE_PARTICIPANT'].includes(user?.role)) {
+    workspaceLinks.push({ to: '/events', label: 'Events' });
+  }
+  if (['ROLE_ADMIN', 'ROLE_ORGANIZER_ADMIN', 'ROLE_ORGANIZER'].includes(user?.role)) {
+    workspaceLinks.push({ to: '/tasks', label: 'Tasks' });
+  }
 
   return (
-    <nav className="navbar">
-      {/* Logo à gauche */}
-      <div className="navbar-left">
-        <Link to="/" className="logo">
-          <Play className="logo-icon" />
-          <span>Flowbite</span>
-        </Link>
-      </div>
-
-      {/* Liens à droite */}
-      <div className="navbar-right">
-        <Link 
-          to="/" 
-          className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
-        >
-          Home
-        </Link>
-        <Link 
-          to="/services" 
-          className={`nav-link ${location.pathname === '/services' ? 'active' : ''}`}
-        >
-          Services
+    <header className="site-header">
+      <nav className="navbar" aria-label="Main navigation">
+        <Link to="/" className="brand" onClick={close}>
+          <span className="brand-mark"><CalendarDays size={19} /></span>
+          <span>Festivio</span>
         </Link>
 
-        {accessToken ? (
-          <>
-            {!isOrganizer && (
-              <Link 
-                to="/events" 
-                className={`nav-link ${location.pathname === '/events' ? 'active' : ''}`}
-              >
-                Events
-              </Link>
-            )}
-            {isOrganizer && (
-              <Link 
-                to="/tasks" 
-                className={`nav-link ${location.pathname === '/tasks' ? 'active' : ''}`}
-              >
-                Tasks
-              </Link>
-            )}
-            <button onClick={handleLogout} className="nav-link logout-button">
-              Logout
-            </button>
-          </>
-        ) : (
-          <>
-            <Link 
-              to="/login" 
-              className={`nav-link ${location.pathname === '/login' ? 'active' : ''}`}
-            >
-              Login
-            </Link>
-            <Link 
-              to="/register" 
-              className={`nav-link ${location.pathname === '/register' ? 'active' : ''}`}
-            >
-              Register
-            </Link>
-          </>
-        )}
-      </div>
-    </nav>
+        <button className="menu-toggle" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-label="Toggle navigation">
+          {open ? <X /> : <Menu />}
+        </button>
+
+        <div className={`navbar-links ${open ? 'open' : ''}`}>
+          <Link to="/" className={active('/')} onClick={close}>Home</Link>
+          <Link to="/services" className={active('/services')} onClick={close}>Platform</Link>
+          {accessToken ? (
+            <>
+              <Link to="/home" className={active('/home')} onClick={close}>Workspace</Link>
+              {workspaceLinks.map((link) => <Link key={link.to} to={link.to} className={active(link.to)} onClick={close}>{link.label}</Link>)}
+              <Link to="/profile" className={active('/profile')} onClick={close}>Profile</Link>
+              <button className="nav-quiet-button" onClick={handleLogout}>Sign out</button>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className={active('/login')} onClick={close}>Sign in</Link>
+              <Link to="/register" className="nav-cta" onClick={close}>Get started</Link>
+            </>
+          )}
+        </div>
+      </nav>
+    </header>
   );
 };
 
 export default NavBar;
-

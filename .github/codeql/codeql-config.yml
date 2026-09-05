@@ -1,0 +1,12 @@
+name: Festivio CodeQL configuration
+
+queries:
+  - uses: security-extended
+
+# `csrf-csrf` provides signed double-submit CSRF protection for every
+# state-changing /api request. CodeQL's JavaScript middleware model currently
+# recognizes older middleware such as lusca/csurf but not csrf-csrf, so the
+# generic missing-middleware query would otherwise report false positives.
+query-filters:
+  - exclude:
+      id: js/missing-token-validation

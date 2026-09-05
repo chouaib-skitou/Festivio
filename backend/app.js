@@ -1,104 +1,170 @@
+const crypto = require('crypto');
+const path = require('path');
 const express = require('express');
-const dotenv = require('dotenv');
 const cors = require('cors');
-const connectDB = require('./config/db');
+const cookieParser = require('cookie-parser');
+const swaggerJsDoc = require('swagger-jsdoc');
+const swaggerUi = require('swagger-ui-express');
+const { config } = require('./config/env');
+const { isDBReady } = require('./config/db');
+const { apiLimiter } = require('./middlewares/rateLimiters');
+const {
+  doubleCsrfProtection,
+  isInvalidCsrfTokenError,
+} = require('./middlewares/csrfMiddleware');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const taskRoutes = require('./routes/taskRoutes');
-const swaggerJsDoc = require('swagger-jsdoc');
-const swaggerUi = require('swagger-ui-express');
-// const fs = require('fs');
-// const path = require('path');
-
-// Load environment variables
-dotenv.config({ path: '.env' });
-
-// Connect to database
-connectDB();
 
 const app = express();
 
-// Middleware for parsing JSON
-app.use(express.json());
+app.disable('x-powered-by');
+app.set('trust proxy', config.isProduction ? 1 : false);
 
-// Serve static files (e.g., images)
-// app.use('/images', express.static('public/images'));
+app.use((req, res, next) => {
+  const requestId = req.get('x-request-id') || crypto.randomUUID();
+  req.id = requestId;
+  res.set('x-request-id', requestId);
+  res.set('x-content-type-options', 'nosniff');
+  res.set('x-frame-options', 'DENY');
+  res.set('referrer-policy', 'strict-origin-when-cross-origin');
+  res.set('permissions-policy', 'camera=(), microphone=(), geolocation=()');
 
-// // Ensure 'public/images' directory exists
-// const uploadDir = path.join(__dirname, 'public', 'images');
-// if (!fs.existsSync(uploadDir)) {
-//   fs.mkdirSync(uploadDir, { recursive: true });
-//   console.log('Created upload directory:', uploadDir);
-// }
+  if (config.isProduction) {
+    res.set(
+      'strict-transport-security',
+      'max-age=15552000; includeSubDomains'
+    );
+  }
 
-// Environment variables
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:5000';
+  next();
+});
 
-// CORS setup
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: false, limit: '1mb' }));
+app.use(cookieParser());
+
+const corsOptions = {
+  origin(origin, callback) {
+    if (!origin || config.corsOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+    const error = new Error('Origin not allowed by CORS');
+    error.status = 403;
+    callback(error);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Request-Id',
+    'X-CSRF-Token',
+  ],
+  exposedHeaders: ['X-Request-Id'],
+  maxAge: 86400,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+
 app.use(
-  cors({
-    origin: '*', // Autorise toutes les origines
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], // Inclut PATCH
-    allowedHeaders: ['Content-Type', 'Authorization'],
+  '/images',
+  express.static(path.join(__dirname, 'public', 'images'), {
+    fallthrough: false,
+    maxAge: config.isProduction ? '1d' : 0,
   })
 );
 
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    service: 'festivio-backend',
+    uptimeSeconds: Math.round(process.uptime()),
+    requestId: req.id,
+  });
+});
 
-// Handle preflight requests for all routes
-app.options('*', cors());
+app.get('/ready', (req, res) => {
+  const ready = isDBReady();
+  res.status(ready ? 200 : 503).json({
+    status: ready ? 'ready' : 'not_ready',
+    database: ready ? 'connected' : 'disconnected',
+    requestId: req.id,
+  });
+});
 
-// Swagger setup
-const swaggerOptions = {
-  definition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'Festivio API Documentation',
-      version: '1.0.0',
-      description: 'API documentation for the Festivio application',
-    },
-    servers: [
-      {
-        url: `${BACKEND_URL}api`, // Use BACKEND_URL for API server
+if (config.swaggerEnabled) {
+  const swaggerOptions = {
+    definition: {
+      openapi: '3.0.0',
+      info: {
+        title: 'Festivio API Documentation',
+        version: '1.0.0',
+        description: 'API documentation for the Festivio application',
       },
-    ],
-    components: {
-      securitySchemes: {
-        bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
+      servers: [{ url: `${config.backendUrl}/api` }],
+      components: {
+        securitySchemes: {
+          bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
         },
       },
+      security: [{ bearerAuth: [] }],
     },
-    security: [
-      {
-        bearerAuth: [],
-      },
-    ],
-  },
-  apis: ['./routes/*.js'], // Path to the API docs
-};
+    apis: ['./routes/*.js'],
+  };
+  const swaggerDocs = swaggerJsDoc(swaggerOptions);
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+}
 
-const swaggerDocs = swaggerJsDoc(swaggerOptions);
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
-
-// Routes
+app.use('/api', apiLimiter);
+app.use('/api', doubleCsrfProtection);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/tasks', taskRoutes);
 
-// Test route
 app.get('/', (req, res) => {
-  res.send('Server is running');
+  res.status(200).json({
+    service: 'Festivio API',
+    status: 'running',
+    requestId: req.id,
+  });
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).send({ message: 'Internal server error' });
+app.use((req, res) => {
+  res.status(404).json({ message: 'Route not found', requestId: req.id });
+});
+
+app.use((err, req, res, _next) => {
+  const csrfFailure = isInvalidCsrfTokenError(err);
+  const status = csrfFailure
+    ? 403
+    : err.status || (err.name === 'MulterError' ? 400 : 500);
+  const message = csrfFailure
+    ? 'Invalid or missing CSRF token'
+    : status >= 500
+      ? 'Internal server error'
+      : err.message;
+  const logError = status >= 500 && config.isProduction ? 'internal_error' : message;
+
+  console.error(
+    JSON.stringify({
+      level: 'error',
+      requestId: req.id,
+      method: req.method,
+      path: req.path,
+      status,
+      error: logError,
+    })
+  );
+  res.status(status).json({
+    message,
+    requestId: req.id,
+    ...(config.isProduction || status < 500 ? {} : { error: err.message }),
+  });
 });
 
 module.exports = app;

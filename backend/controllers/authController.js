@@ -1,137 +1,199 @@
-// controllers/authController.js
-const User = require('../models/User');
-const ResetPasswordRequest = require('../models/ResetPasswordRequest');
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { validationResult } = require('express-validator');
 const nodemailer = require('nodemailer');
+const { validationResult } = require('express-validator');
+const User = require('../models/User');
+const ResetPasswordRequest = require('../models/ResetPasswordRequest');
 const UserDTO = require('../dtos/UserDTO');
+const { config } = require('../config/env');
+const { ROLES, PUBLIC_REGISTRATION_ROLES } = require('../constants/roles');
 
-// Helper functions to generate tokens
-// Generate access token with userId and role
+const REFRESH_COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
 const generateAccessToken = (userId, role) =>
-  jwt.sign({ userId, role }, process.env.JWT_SECRET, { expiresIn: '3d' });
-
-// Generate refresh token with userId and role
-const generateRefreshToken = (userId, role) =>
-  jwt.sign({ userId, role }, process.env.JWT_REFRESH_SECRET, { expiresIn: '30d' });
-
-
-
-const generateEmailToken = (userId) =>
-  jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '1d' });
-
-// Helper to send email
-const sendEmail = async (to, subject, html) => {
-  const transporter = nodemailer.createTransport({
-    service: 'Gmail',
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
+  jwt.sign({ userId: userId.toString(), role }, config.jwtSecret, {
+    algorithm: 'HS256',
+    expiresIn: config.accessTokenTtl,
   });
 
-  await transporter.sendMail({ from: process.env.EMAIL_USER, to, subject, html });
+const generateRefreshToken = (userId, role) =>
+  jwt.sign({ userId: userId.toString(), role }, config.jwtRefreshSecret, {
+    algorithm: 'HS256',
+    expiresIn: config.refreshTokenTtl,
+  });
+
+const refreshCookieOptions = () => ({
+  httpOnly: true,
+  secure: config.isProduction,
+  sameSite: 'lax',
+  path: '/api/auth',
+  maxAge: REFRESH_COOKIE_MAX_AGE_MS,
+});
+
+const setRefreshCookie = (res, token) => {
+  res.cookie(config.refreshCookieName, token, refreshCookieOptions());
 };
 
-// Register User
-exports.register = async (req, res) => {
-  
+const clearRefreshCookie = (res) => {
+  const options = refreshCookieOptions();
+  delete options.maxAge;
+  res.clearCookie(config.refreshCookieName, options);
+};
 
+const getCookie = (req, name) => {
+  const header = req.get('cookie');
+  if (!header) return null;
+
+  for (const item of header.split(';')) {
+    const separator = item.indexOf('=');
+    if (separator === -1) continue;
+    const key = item.slice(0, separator).trim();
+    if (key === name) {
+      return decodeURIComponent(item.slice(separator + 1).trim());
+    }
+  }
+
+  return null;
+};
+
+const createTransporter = () => {
+  if (config.smtpHost) {
+    const transport = {
+      host: config.smtpHost,
+      port: config.smtpPort,
+      secure: config.smtpSecure,
+    };
+
+    if (config.smtpUser && config.smtpPass) {
+      transport.auth = { user: config.smtpUser, pass: config.smtpPass };
+    }
+
+    return nodemailer.createTransport(transport);
+  }
+
+  if (config.smtpUser && config.smtpPass) {
+    return nodemailer.createTransport({
+      service: 'Gmail',
+      auth: { user: config.smtpUser, pass: config.smtpPass },
+    });
+  }
+
+  return null;
+};
+
+const sendEmail = async (to, subject, html) => {
+  const transporter = createTransporter();
+  if (!transporter) {
+    if (config.isProduction) {
+      throw new Error('Email transport is not configured');
+    }
+    console.info(`Email skipped in local development: ${subject}`);
+    return;
+  }
+
+  await transporter.sendMail({
+    from: config.emailFrom,
+    to,
+    subject,
+    html,
+  });
+};
+
+exports.register = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    console.log('Validation errors:', errors.array());
     return res.status(400).json({ errors: errors.array() });
   }
 
   try {
-    const { firstName, lastName, username, email, password, role } = req.body;
-
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      if (!existingUser.isVerified) {
-        return res.status(400).json({
-          message: 'User already exists but email is not verified. Please verify your email.',
-        });
-      }
-      return res.status(400).json({ message: 'User already exists.' });
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create new user
-    const user = new User({
+    const {
       firstName,
       lastName,
       username,
       email,
-      password: hashedPassword,
+      password,
+      role = ROLES.PARTICIPANT,
+    } = req.body;
+
+    if (!PUBLIC_REGISTRATION_ROLES.has(role)) {
+      return res.status(403).json({
+        message: 'This role cannot be selected during public registration.',
+      });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (existingUser) {
+      return res.status(400).json({
+        message: 'An account already exists for this email.',
+      });
+    }
+
+    const user = new User({
+      firstName,
+      lastName,
+      username,
+      email: normalizedEmail,
+      password: await bcrypt.hash(password, 12),
       role,
       isVerified: false,
     });
-
     await user.save();
-    console.log('User saved to database:', user);
 
-    // Generate email verification token
-    const emailToken = generateEmailToken(user._id);
-    const verificationLink = `${req.protocol}://${req.get('host')}/api/auth/verify-email/${user._id}/${emailToken}`;
-    console.log('Verification link:', verificationLink);
+    const emailToken = jwt.sign(
+      { userId: user._id.toString(), purpose: 'verify-email' },
+      config.jwtSecret,
+      { algorithm: 'HS256', expiresIn: '1d' }
+    );
+    const verificationLink = `${config.backendUrl}/api/auth/verify-email/${user._id}/${emailToken}`;
 
-    console.log('Received userId:', user._id);
-    console.log('Received token:', emailToken);
-
-    // Send verification email
     await sendEmail(
-      email,
-      'Verify Your Email',
-      `<p>Click <a href="${verificationLink}">here</a> to verify your email.</p>`
+      normalizedEmail,
+      'Verify your Festivio account',
+      `<p>Welcome to Festivio.</p><p><a href="${verificationLink}">Verify your email address</a>.</p>`
     );
 
-    res.status(201).json({
-      message: 'Registration successful. Please check your email to verify your account.',
+    return res.status(201).json({
+      message:
+        'Registration successful. Check your email to verify your account.',
     });
-  } catch (err) { // Ensure "err" is used here
-    console.error('Registration error:', err);
-    res.status(500).json({ message: 'Server error', error: err.message });
+  } catch (error) {
+    console.error('Registration failed:', error.message);
+    return res.status(500).json({ message: 'Unable to register account' });
   }
 };
 
-
-// Verify Email
 exports.verifyEmail = async (req, res) => {
   const { userId, token } = req.params;
 
   try {
-    console.log('Token:', token);
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log('Decoded token:', decoded);
+    const decoded = jwt.verify(token, config.jwtSecret, {
+      algorithms: ['HS256'],
+    });
 
-    if (decoded.userId !== userId) {
-      return res.status(400).json({ message: 'Invalid token' });
+    if (decoded.purpose !== 'verify-email' || decoded.userId !== userId) {
+      return res.status(400).json({ message: 'Invalid verification token' });
     }
 
     const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    if (user.isVerified) {
-      return res.status(400).json({ message: 'User is already verified' });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid verification token' });
     }
 
-    user.isVerified = true;
-    console.log('User verified:', user);
-    await user.save();
+    if (!user.isVerified) {
+      user.isVerified = true;
+      await user.save();
+    }
 
-    res.redirect(`${process.env.FRONTEND_URL}/login`); // Redirect to login page after verification
-  } catch (error) {
-    console.error('Verification error:', error);
-    res.status(400).json({ message: 'Invalid or expired token' });
+    return res.redirect(`${config.frontendUrl}/login?verified=1`);
+  } catch (_error) {
+    return res
+      .status(400)
+      .json({ message: 'Invalid or expired verification token' });
   }
 };
 
-// Login User
 exports.login = async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -139,116 +201,139 @@ exports.login = async (req, res) => {
   }
 
   try {
-    const { email, password } = req.body;
-
-    // Find user
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: 'Invalid credentials' });
-
-    if (!user.isVerified) {
-      return res.status(401).json({ message: 'Please verify your email before logging in.' });
-    }
-
-    // Compare password
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
-
-    // Generate tokens with role
-    const token = generateAccessToken(user._id, user.role);
-    const refreshToken = generateRefreshToken(user._id, user.role);
-
-    res.json({ user: new UserDTO(user), token, refreshToken });
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-};
-
-
-
-// Refresh Token
-exports.refreshToken = (req, res) => {
-  const { refreshToken } = req.body;
-  if (!refreshToken) return res.status(401).json({ message: 'Refresh token required' });
-
-  jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET, (err, decoded) => {
-    if (err) return res.status(403).json({ message: 'Invalid refresh token' });
-
-    const accessToken = generateAccessToken(decoded.userId);
-    res.json({ accessToken, refreshToken });
-  });
-};
-
-// Request Password Reset
-exports.requestPasswordReset = async (req, res) => {
-  const { email } = req.body;
-
-  try {
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    // Generate reset token
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-    // Save the reset token in ResetPasswordRequest
-    await ResetPasswordRequest.create({
-      token,
-      userId: user._id,
-      expiresAt: Date.now() + 3600000, // 1 hour expiry
-    });
-
-    // Send reset email
-    const resetLink = `${process.env.FRONTEND_URL}reset-password/${token}`;
-    await sendEmail(
-      email,
-      'Reset Your Password',
-      `<p>Click <a href="${resetLink}">here</a> to reset your password. This link will expire in 1 hour.</p>`
+    const normalizedEmail = req.body.email.trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail }).select(
+      '+password'
     );
 
-    res.json({ message: 'Password reset link sent to your email.' });
+    if (!user || !(await bcrypt.compare(req.body.password, user.password))) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    if (!user.isVerified) {
+      return res.status(401).json({
+        message: 'Verify your email before signing in.',
+      });
+    }
+
+    const accessToken = generateAccessToken(user._id, user.role);
+    setRefreshCookie(res, generateRefreshToken(user._id, user.role));
+
+    return res.json({ user: new UserDTO(user), accessToken });
   } catch (error) {
-    console.error('Request password reset error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Login failed:', error.message);
+    return res.status(500).json({ message: 'Unable to sign in' });
   }
 };
 
-// Reset Password
-exports.resetPassword = async (req, res) => {
-  const { token } = req.params; // Extract token from URL
-  const { newPassword, confirmPassword } = req.body;
+exports.refreshToken = async (req, res) => {
+  const refreshToken = getCookie(req, config.refreshCookieName);
+  if (!refreshToken) {
+    return res.status(401).json({ message: 'Refresh session required' });
+  }
 
   try {
-    if (newPassword !== confirmPassword) {
-      return res.status(400).json({ message: 'Passwords do not match' });
+    const decoded = jwt.verify(refreshToken, config.jwtRefreshSecret, {
+      algorithms: ['HS256'],
+    });
+    const user = await User.findById(decoded.userId);
+
+    if (!user || !user.isVerified) {
+      clearRefreshCookie(res);
+      return res.status(401).json({ message: 'Session is no longer valid' });
     }
 
-    // Find the reset password request by token
-    const resetRequest = await ResetPasswordRequest.findOne({ token });
-    if (!resetRequest) {
-      return res.status(400).json({ message: 'Invalid or expired token' });
+    const accessToken = generateAccessToken(user._id, user.role);
+    setRefreshCookie(res, generateRefreshToken(user._id, user.role));
+
+    return res.json({ user: new UserDTO(user), accessToken });
+  } catch (_error) {
+    clearRefreshCookie(res);
+    return res.status(401).json({ message: 'Invalid or expired session' });
+  }
+};
+
+exports.logout = (_req, res) => {
+  clearRefreshCookie(res);
+  return res.status(204).send();
+};
+
+exports.requestPasswordReset = async (req, res) => {
+  const genericResponse = {
+    message: 'If an account exists for this email, a reset link has been sent.',
+  };
+
+  try {
+    const normalizedEmail = req.body.email?.trim().toLowerCase();
+    const user = normalizedEmail
+      ? await User.findOne({ email: normalizedEmail })
+      : null;
+
+    if (!user) {
+      return res.json(genericResponse);
     }
 
-    if (resetRequest.expiresAt < Date.now()) {
-      return res.status(400).json({ message: 'Token has expired' });
-    }
+    await ResetPasswordRequest.deleteMany({ userId: user._id });
 
-    // Find the user by ID
-    const user = await User.findById(resetRequest.userId);
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    const token = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    await ResetPasswordRequest.create({
+      tokenHash,
+      userId: user._id,
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    });
 
-    // Hash the new password
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const resetLink = `${config.frontendUrl}/reset-password/${token}`;
+    await sendEmail(
+      user.email,
+      'Reset your Festivio password',
+      `<p>A password reset was requested for your Festivio account.</p><p><a href="${resetLink}">Reset your password</a>. This link expires in one hour.</p>`
+    );
 
-    // Update the user's password
-    user.password = hashedPassword;
-    await user.save();
-
-    // Delete the reset password request
-    await ResetPasswordRequest.deleteOne({ _id: resetRequest._id });
-
-    res.json({ message: 'Password successfully reset. You can now log in with your new password.' });
+    return res.json(genericResponse);
   } catch (error) {
-    console.error('Password reset error:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Password reset request failed:', error.message);
+    return res
+      .status(500)
+      .json({ message: 'Unable to process password reset request' });
+  }
+};
+
+exports.resetPassword = async (req, res) => {
+  const { token } = req.params;
+  const { newPassword, confirmPassword } = req.body;
+
+  if (newPassword !== confirmPassword || newPassword?.length < 10) {
+    return res.status(400).json({
+      message: 'Passwords must match and contain at least 10 characters.',
+    });
+  }
+
+  try {
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const resetRequest = await ResetPasswordRequest.findOne({
+      tokenHash,
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (!resetRequest) {
+      return res.status(400).json({ message: 'Invalid or expired reset token' });
+    }
+
+    const user = await User.findById(resetRequest.userId).select('+password');
+    if (!user) {
+      await ResetPasswordRequest.deleteOne({ _id: resetRequest._id });
+      return res.status(400).json({ message: 'Invalid or expired reset token' });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 12);
+    await user.save();
+    await ResetPasswordRequest.deleteMany({ userId: user._id });
+    clearRefreshCookie(res);
+
+    return res.json({ message: 'Password successfully reset.' });
+  } catch (error) {
+    console.error('Password reset failed:', error.message);
+    return res.status(500).json({ message: 'Unable to reset password' });
   }
 };

@@ -1,0 +1,10 @@
+{
+  "name": "festivio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Role-aware event planning and operations platform",
+  "scripts": {
+    "version:check": "node scripts/check-versions.mjs"
+  },
+  "license": "MIT"
+}
