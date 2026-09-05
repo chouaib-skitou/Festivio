@@ -23,13 +23,9 @@ const loadManagedEvent = async (eventId, user) => {
     eventId instanceof mongoose.Types.ObjectId ? eventId : toObjectId(eventId);
   if (!safeEventId) return { status: 400, message: 'Invalid event id' };
 
-  // safeEventId is validated as a 24-character hex value, converted to ObjectId,
-  // and queried with Mongoose filter sanitization enabled.
-  // codeql[js/sql-injection]
-  const event = await Event.findOne({ _id: safeEventId }).setOptions({
-    sanitizeFilter: true,
-    strictQuery: true,
-  });
+  const event = await Event.findOne({
+    _id: { $eq: safeEventId },
+  }).setOptions({ sanitizeFilter: true, strictQuery: true });
   if (!event) return { status: 404, message: 'Event not found' };
   if (!canManageEvent(event, user)) {
     return { status: 403, message: 'You cannot manage tasks for this event' };
