@@ -28,10 +28,10 @@ jobs:
         run: npm run version:check
       - name: Check release configuration
         run: |
-          node -e "JSON.parse(require('fs').readFileSync('release-please-config.json')); JSON.parse(require('fs').readFileSync('.release-please-manifest.json'))"
+          node -c .releaserc.cjs
+          node -e "const p=require('./package.json'); const deps=p.devDependencies||{}; if (p.scripts.release !== 'semantic-release') process.exit(1); for (const name of ['semantic-release','@semantic-release/changelog','@semantic-release/commit-analyzer','@semantic-release/exec','@semantic-release/git','@semantic-release/github','@semantic-release/release-notes-generator']) { if (!deps[name]) { console.error(`${name} missing`); process.exit(1); } }"
           test -s CHANGELOG.md
-          grep -q '"changelog-path": "CHANGELOG.md"' release-please-config.json
-          grep -q '"include-v-in-tag": true' release-please-config.json
+          test -s scripts/update-version.cjs
           node -e "const p=require('./backend/package.json'); if (!p.dependencies['csrf-csrf']) process.exit(1)"
       - name: Check environment and fixture hygiene
         shell: bash

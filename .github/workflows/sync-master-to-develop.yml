@@ -3,35 +3,42 @@ name: Sync master to develop
 on:
   push:
     branches: [master]
+  workflow_dispatch:
 
 permissions:
-  contents: read
-  pull-requests: write
+  contents: write
+
+concurrency:
+  group: sync-master-to-develop
+  cancel-in-progress: false
 
 jobs:
-  open-sync-pr:
+  sync:
+    name: Fast-forward release state to develop
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - name: Check out master
+        uses: actions/checkout@v6
         with:
+          ref: master
           fetch-depth: 0
-      - name: Open master to develop PR when needed
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.RELEASE_TOKEN || github.token }}
+
+      - name: Synchronize master into develop when needed
         shell: bash
         run: |
           git fetch origin develop master
-          if [ "$(git rev-list --count origin/develop..origin/master)" -eq 0 ]; then
-            echo "develop already contains master"
+
+          master_tree=$(git rev-parse 'origin/master^{tree}')
+          develop_tree=$(git rev-parse 'origin/develop^{tree}')
+          if [ "$master_tree" = "$develop_tree" ]; then
+            echo "develop and master have identical trees; no sync needed"
             exit 0
           fi
-          existing=$(gh pr list --state open --base develop --head master --json number --jq '.[0].number // empty')
-          if [ -n "$existing" ]; then
-            echo "Sync PR #$existing already exists"
-            exit 0
-          fi
-          gh pr create \
-            --base develop \
-            --head master \
-            --title "chore: sync master into develop" \
-            --body "Automated synchronization PR. Merge normally after checks pass; this workflow never force-updates develop."
+
+          sync_dir="${RUNNER_TEMP}/develop-sync"
+          git worktree add --detach "$sync_dir" origin/develop
+          git -C "$sync_dir" config user.name "github-actions[bot]"
+          git -C "$sync_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$sync_dir" merge --no-ff origin/master -m "chore(sync): merge master into develop [skip ci]"
+          git -C "$sync_dir" push origin HEAD:develop
