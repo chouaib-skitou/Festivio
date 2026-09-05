@@ -6,6 +6,7 @@ const swaggerJsDoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 const { config } = require('./config/env');
 const { isDBReady } = require('./config/db');
+const { apiLimiter } = require('./middlewares/rateLimiters');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const eventRoutes = require('./routes/eventRoutes');
@@ -44,11 +45,11 @@ const corsOptions = {
       callback(null, true);
       return;
     }
-
     const error = new Error('Origin not allowed by CORS');
     error.status = 403;
     callback(error);
   },
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
   exposedHeaders: ['X-Request-Id'],
@@ -96,46 +97,34 @@ if (config.swaggerEnabled) {
       servers: [{ url: `${config.backendUrl}/api` }],
       components: {
         securitySchemes: {
-          bearerAuth: {
-            type: 'http',
-            scheme: 'bearer',
-            bearerFormat: 'JWT',
-          },
+          bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
         },
       },
       security: [{ bearerAuth: [] }],
     },
     apis: ['./routes/*.js'],
   };
-
   const swaggerDocs = swaggerJsDoc(swaggerOptions);
   app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 }
 
+app.use('/api', apiLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/tasks', taskRoutes);
 
 app.get('/', (req, res) => {
-  res.status(200).json({
-    service: 'Festivio API',
-    status: 'running',
-    requestId: req.id,
-  });
+  res.status(200).json({ service: 'Festivio API', status: 'running', requestId: req.id });
 });
 
 app.use((req, res) => {
-  res.status(404).json({
-    message: 'Route not found',
-    requestId: req.id,
-  });
+  res.status(404).json({ message: 'Route not found', requestId: req.id });
 });
 
 app.use((err, req, res, _next) => {
   const status = err.status || (err.name === 'MulterError' ? 400 : 500);
   const message = status >= 500 ? 'Internal server error' : err.message;
-
   console.error(
     JSON.stringify({
       level: 'error',
@@ -146,7 +135,6 @@ app.use((err, req, res, _next) => {
       error: err.message,
     })
   );
-
   res.status(status).json({
     message,
     requestId: req.id,

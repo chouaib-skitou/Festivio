@@ -1,26 +1,10 @@
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
 const multer = require('multer');
 
-const uploadPath = path.join(__dirname, '../public/images');
-fs.mkdirSync(uploadPath, { recursive: true });
-
-const allowedImageTypes = new Map([
-  ['image/jpeg', '.jpg'],
-  ['image/png', '.png'],
-  ['image/webp', '.webp'],
+const allowedImageTypes = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
 ]);
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, callback) => {
-    callback(null, uploadPath);
-  },
-  filename: (_req, file, callback) => {
-    const extension = allowedImageTypes.get(file.mimetype) || '';
-    callback(null, `image-${crypto.randomUUID()}${extension}`);
-  },
-});
 
 const fileFilter = (_req, file, callback) => {
   if (allowedImageTypes.has(file.mimetype)) {
@@ -34,7 +18,7 @@ const fileFilter = (_req, file, callback) => {
 };
 
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   fileFilter,
   limits: {
     files: 1,

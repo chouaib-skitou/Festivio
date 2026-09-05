@@ -1,27 +1,23 @@
 const request = require('supertest');
 const express = require('express');
-const {
-  refreshToken,
-  verifyEmail,
-  resetPassword,
-  requestPasswordReset,
-} = require('../controllers/authController');
+const { refreshToken, logout } = require('../controllers/authController');
 
 const app = express();
 app.use(express.json());
-
 app.post('/api/auth/refresh-token', refreshToken);
-app.get('/api/auth/verify-email/:userId/:token', verifyEmail);
-app.post('/api/auth/reset-password-request', requestPasswordReset);
-app.post('/api/auth/reset-password/:token', resetPassword);
+app.post('/api/auth/logout', logout);
 
-describe('Authentication API', () => {
-  describe('POST /api/auth/refresh-token', () => {
-    it('returns 401 when no refresh token is provided', async () => {
-      const response = await request(app).post('/api/auth/refresh-token').send();
+describe('Authentication session API', () => {
+  it('returns 401 when no HttpOnly refresh cookie is provided', async () => {
+    const response = await request(app).post('/api/auth/refresh-token').send();
+    expect(response.status).toBe(401);
+    expect(response.body.message).toBe('Refresh session required');
+  });
 
-      expect(response.status).toBe(401);
-      expect(response.body.message).toBe('Refresh token required');
-    });
+  it('clears the refresh cookie on logout', async () => {
+    const response = await request(app).post('/api/auth/logout').send();
+    expect(response.status).toBe(204);
+    expect(response.headers['set-cookie'][0]).toContain('festivio_refresh=;');
+    expect(response.headers['set-cookie'][0]).toContain('HttpOnly');
   });
 });

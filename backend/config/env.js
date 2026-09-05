@@ -42,9 +42,26 @@ const config = Object.freeze({
   mongoMaxPoolSize: parseInteger(process.env.MONGO_MAX_POOL_SIZE, 10),
   jwtSecret: process.env.JWT_SECRET,
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET,
+  accessTokenTtl: process.env.ACCESS_TOKEN_TTL || '15m',
+  refreshTokenTtl: process.env.REFRESH_TOKEN_TTL || '30d',
+  refreshCookieName: process.env.REFRESH_COOKIE_NAME || 'festivio_refresh',
   frontendUrl,
   backendUrl,
   corsOrigins,
+  imgurClientId: process.env.IMGUR_CLIENT_ID,
+  emailFrom: process.env.EMAIL_FROM || 'Festivio <noreply@festivio.local>',
+  smtpHost: process.env.SMTP_HOST,
+  smtpPort: parseInteger(process.env.SMTP_PORT, 1025),
+  smtpSecure: parseBoolean(process.env.SMTP_SECURE, false),
+  smtpUser: process.env.SMTP_USER || process.env.EMAIL_USER,
+  smtpPass: process.env.SMTP_PASS || process.env.EMAIL_PASS,
+  rateLimitWindowMs: parseInteger(process.env.RATE_LIMIT_WINDOW_MS, 60000),
+  rateLimitMax: parseInteger(process.env.RATE_LIMIT_MAX, 120),
+  authRateLimitWindowMs: parseInteger(
+    process.env.AUTH_RATE_LIMIT_WINDOW_MS,
+    15 * 60 * 1000
+  ),
+  authRateLimitMax: parseInteger(process.env.AUTH_RATE_LIMIT_MAX, 20),
   swaggerEnabled: parseBoolean(
     process.env.SWAGGER_ENABLED,
     nodeEnv !== 'production'

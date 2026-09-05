@@ -1,258 +1,212 @@
+const crypto = require('crypto');
+const fs = require('fs/promises');
+const path = require('path');
 const axios = require('axios');
 const Event = require('../models/Event');
 const EventDTO = require('../dtos/EventDTO');
+const { config } = require('../config/env');
+const { ROLES } = require('../constants/roles');
 
-// Upload image to Imgur
-const uploadToImgur = async (file) => {
-  const formData = new FormData();
-  formData.append('image', file.buffer.toString('base64')); // Convert file to base64
-
-  const response = await axios.post('https://api.imgur.com/3/image', formData, {
-    headers: {
-      Authorization: `Client-ID ${process.env.IMGUR_CLIENT_ID}`, // Use your Client ID from .env
-    },
-  });
-
-  return response.data.data.link; // Return the Imgur image link
+const imageExtensions = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
 };
 
-// Create an event
+const uploadImage = async (file) => {
+  if (!file) return null;
+
+  if (config.imgurClientId) {
+    const formData = new FormData();
+    formData.append('image', file.buffer.toString('base64'));
+    const response = await axios.post('https://api.imgur.com/3/image', formData, {
+      headers: { Authorization: `Client-ID ${config.imgurClientId}` },
+      timeout: 10000,
+    });
+    return response.data.data.link;
+  }
+
+  const extension = imageExtensions[file.mimetype];
+  const filename = `event-${crypto.randomUUID()}${extension}`;
+  const imageDir = path.join(__dirname, '../public/images');
+  await fs.mkdir(imageDir, { recursive: true });
+  await fs.writeFile(path.join(imageDir, filename), file.buffer);
+  return `/images/${filename}`;
+};
+
+const canManageEvent = (event, user) =>
+  user.role === ROLES.ADMIN ||
+  (user.role === ROLES.ORGANIZER_ADMIN &&
+    event.organizer.toString() === user.userId);
+
 exports.createEvent = async (req, res) => {
   try {
-    const { name, description, date, participants, isOnline, zoomLink, organizer } = req.body;
+    const { name, description, date, participants, isOnline, zoomLink } = req.body;
+    const imagePath = await uploadImage(req.file);
+    const normalizedParticipants = Array.isArray(participants)
+      ? participants
+      : participants
+        ? [participants]
+        : [];
 
-    console.log('Decoded User:', req.user);
-    console.log('Request Body:', req.body);
-
-    if (!req.user) {
-      return res.status(403).json({ message: 'User information missing in request' });
-    }
-
-    if (!organizer) {
-      return res.status(400).json({ message: 'Organizer ID is required' });
-    }
-
-    if (req.user.role !== 'ROLE_ORGANIZER_ADMIN' && req.user.role !== 'ROLE_ADMIN') {
-      return res.status(403).json({ message: 'Access denied: Invalid role' });
-    }
-
-    if (organizer.toString() !== req.user.userId.toString()) {
-      return res.status(403).json({ message: 'Access denied: Organizer ID mismatch' });
-    }
-
-    let imageUrl = null;
-    if (req.file) {
-      imageUrl = await uploadToImgur(req.file);
-    }
-
-    const event = new Event({
+    const event = await Event.create({
       name,
       description,
       date,
       organizer: req.user.userId,
-      participants,
-      isOnline,
-      zoomLink,
-      imagePath: imageUrl, // Save the Imgur image URL
+      participants: normalizedParticipants,
+      isOnline: isOnline === true || isOnline === 'true',
+      zoomLink: isOnline === true || isOnline === 'true' ? zoomLink : undefined,
+      imagePath,
     });
 
-    await event.save();
-
-    res.status(201).json({
+    return res.status(201).json({
       message: 'Event created successfully',
       event: new EventDTO(event),
     });
   } catch (error) {
-    console.error('Error creating event:', error.message);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Event creation failed:', error.message);
+    return res.status(500).json({ message: 'Unable to create event' });
   }
 };
 
-
-
-
-
-// Get events
-// Get events
 exports.getEvents = async (req, res) => {
   try {
-    let events;
-
-    // Check user role and fetch events accordingly
-    if (req.user.role === 'ROLE_ORGANIZER_ADMIN') {
-      // Get events created by the user
-      events = await Event.find({ organizer: req.user.userId }).populate('participants tasks');
-    } else if (req.user.role === 'ROLE_ADMIN' || req.user.role === 'ROLE_PARTICIPANT') {
-      // Get all events
-      events = await Event.find().populate('participants tasks');
-    }  else {
-      return res.status(403).json({ message: 'Access denied: Invalid role' });
-    }
-
-    const eventDTOs = events.map((event) => new EventDTO(event));
-    res.status(200).json({ events: eventDTOs });
+    const filter =
+      req.user.role === ROLES.ORGANIZER_ADMIN
+        ? { organizer: req.user.userId }
+        : {};
+    const events = await Event.find(filter)
+      .populate('participants', 'firstName lastName email role')
+      .populate('tasks')
+      .sort({ date: 1 });
+    return res.json({ events: events.map((event) => new EventDTO(event)) });
   } catch (error) {
-    console.error('Error fetching events:', error.message);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Event listing failed:', error.message);
+    return res.status(500).json({ message: 'Unable to fetch events' });
   }
 };
 
+const applyEventUpdates = (event, body) => {
+  const allowedFields = [
+    'name',
+    'description',
+    'date',
+    'participants',
+    'isOnline',
+    'zoomLink',
+  ];
+  for (const field of allowedFields) {
+    if (body[field] !== undefined) {
+      event[field] = body[field];
+    }
+  }
+};
 
-// Update an event
 exports.updateEvent = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { name, description, date, participants } = req.body;
-
-    const event = await Event.findById(id);
-    if (!event) {
-      return res.status(404).json({ message: 'Event not found' });
+    const event = await Event.findById(req.params.id);
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+    if (!canManageEvent(event, req.user)) {
+      return res.status(403).json({ message: 'You cannot manage this event' });
     }
 
-    if (event.organizer.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Access denied' });
-    }
-
-    event.name = name || event.name;
-    event.description = description || event.description;
-    event.date = date || event.date;
-    event.participants = participants || event.participants;
-
+    applyEventUpdates(event, req.body);
+    if (req.file) event.imagePath = await uploadImage(req.file);
     await event.save();
-
-    res.status(200).json({
-      message: 'Event updated successfully',
-      event: new EventDTO(event),
-    });
+    return res.json({ message: 'Event updated successfully', event: new EventDTO(event) });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Event update failed:', error.message);
+    return res.status(500).json({ message: 'Unable to update event' });
   }
 };
 
-// Partially update an event
-exports.patchEvent = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updates = req.body;
+exports.patchEvent = exports.updateEvent;
 
-    const event = await Event.findById(id);
-    if (!event) {
-      return res.status(404).json({ message: 'Event not found' });
-    }
-
-    if (event.organizer.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Access denied' });
-    }
-
-    Object.assign(event, updates);
-    await event.save();
-
-    res.status(200).json({
-      message: 'Event partially updated successfully',
-      event: new EventDTO(event),
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-};
-
-// Delete an event
 exports.deleteEvent = async (req, res) => {
   try {
-    const { id } = req.params;
-
-    const event = await Event.findById(id);
-    if (!event) {
-      return res.status(404).json({ message: 'Event not found' });
+    const event = await Event.findById(req.params.id);
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+    if (!canManageEvent(event, req.user)) {
+      return res.status(403).json({ message: 'You cannot manage this event' });
     }
 
-    if (event.organizer.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Access denied' });
-    }
-
-    await event.delete();
-
-    res.status(200).json({ message: 'Event deleted successfully' });
+    await event.deleteOne();
+    return res.json({ message: 'Event deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Event deletion failed:', error.message);
+    return res.status(500).json({ message: 'Unable to delete event' });
   }
 };
 
-
-// Participate in an event
 exports.participateInEvent = async (req, res) => {
+  if (req.user.role !== ROLES.PARTICIPANT) {
+    return res.status(403).json({ message: 'Only participants can join events' });
+  }
+
   try {
-    const { id } = req.params;
-
-    // Find the event by ID
-    const event = await Event.findById(id);
-    if (!event) {
-      return res.status(404).json({ message: 'Event not found' });
+    const event = await Event.findById(req.params.id);
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+    const alreadyJoined = event.participants.some(
+      (participantId) => participantId.toString() === req.user.userId
+    );
+    if (alreadyJoined) {
+      return res.status(400).json({ message: 'You already joined this event' });
     }
 
-    // Check if the user is already a participant
-    if (event.participants.includes(req.user.userId)) {
-      return res.status(400).json({ message: 'User is already a participant in this event' });
-    }
-
-    // Add the user to the participants list
     event.participants.push(req.user.userId);
     await event.save();
-
-    res.status(200).json({ message: 'Successfully added as a participant', event: new EventDTO(event) });
+    return res.json({ message: 'Event joined successfully', event: new EventDTO(event) });
   } catch (error) {
-    console.error('Error participating in event:', error.message);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Event participation failed:', error.message);
+    return res.status(500).json({ message: 'Unable to join event' });
   }
 };
 
-
-// Unparticipate from an event
 exports.unparticipateEvent = async (req, res) => {
-  const { id } = req.params;
-  const userId = req.user.userId;
+  if (req.user.role !== ROLES.PARTICIPANT) {
+    return res.status(403).json({ message: 'Only participants can leave events' });
+  }
 
   try {
-    const event = await Event.findById(id);
-
-    if (!event) {
-      return res.status(404).json({ message: 'Event not found' });
+    const event = await Event.findById(req.params.id);
+    if (!event) return res.status(404).json({ message: 'Event not found' });
+    const before = event.participants.length;
+    event.participants = event.participants.filter(
+      (participantId) => participantId.toString() !== req.user.userId
+    );
+    if (event.participants.length === before) {
+      return res.status(400).json({ message: 'You are not participating in this event' });
     }
 
-    if (!event.participants.includes(userId)) {
-      return res.status(400).json({ message: 'User is not participating in this event' });
-    }
-
-    // Remove user from participants
-    event.participants = event.participants.filter(participantId => participantId.toString() !== userId);
     await event.save();
-
-    res.status(200).json({ message: 'Unparticipated successfully', event: event });
+    return res.json({ message: 'Event left successfully', event: new EventDTO(event) });
   } catch (error) {
-    console.error('Error unparticipating from event:', error.message);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Event leave failed:', error.message);
+    return res.status(500).json({ message: 'Unable to leave event' });
   }
 };
 
-
-// Get a single event by ID
 exports.getEventById = async (req, res) => {
   try {
-    const { id } = req.params;
+    const event = await Event.findById(req.params.id)
+      .populate('participants', 'firstName lastName email role')
+      .populate({
+        path: 'tasks',
+        populate: { path: 'assignedTo', select: 'firstName lastName email role' },
+      });
+    if (!event) return res.status(404).json({ message: 'Event not found' });
 
-    // Find the event by ID and populate tasks and participants
-    const event = await Event.findById(id)
-      .populate('tasks') // Populate tasks
-      .populate('participants'); // Populate participants
-
-    if (!event) {
-      return res.status(404).json({ message: 'Event not found' });
+    if (
+      req.user.role === ROLES.ORGANIZER_ADMIN &&
+      event.organizer.toString() !== req.user.userId
+    ) {
+      return res.status(403).json({ message: 'You cannot access this event' });
     }
 
-    res.status(200).json({ event: new EventDTO(event) });
+    return res.json({ event: new EventDTO(event) });
   } catch (error) {
-    console.error('Error fetching event:', error.message);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Event fetch failed:', error.message);
+    return res.status(500).json({ message: 'Unable to fetch event' });
   }
 };
-
