@@ -1,37 +1,25 @@
-const crypto = require('crypto');
-const fs = require('fs/promises');
-const path = require('path');
 const axios = require('axios');
 const Event = require('../models/Event');
 const EventDTO = require('../dtos/EventDTO');
 const { config } = require('../config/env');
 const { ROLES } = require('../constants/roles');
 
-const imageExtensions = {
-  'image/jpeg': '.jpg',
-  'image/png': '.png',
-  'image/webp': '.webp',
-};
-
 const uploadImage = async (file) => {
   if (!file) return null;
 
-  if (config.imgurClientId) {
-    const formData = new FormData();
-    formData.append('image', file.buffer.toString('base64'));
-    const response = await axios.post('https://api.imgur.com/3/image', formData, {
-      headers: { Authorization: `Client-ID ${config.imgurClientId}` },
-      timeout: 10000,
-    });
-    return response.data.data.link;
+  if (!config.imgurClientId) {
+    const error = new Error('Image upload is not configured');
+    error.status = 503;
+    throw error;
   }
 
-  const extension = imageExtensions[file.mimetype];
-  const filename = `event-${crypto.randomUUID()}${extension}`;
-  const imageDir = path.join(__dirname, '../public/images');
-  await fs.mkdir(imageDir, { recursive: true });
-  await fs.writeFile(path.join(imageDir, filename), file.buffer);
-  return `/images/${filename}`;
+  const formData = new FormData();
+  formData.append('image', file.buffer.toString('base64'));
+  const response = await axios.post('https://api.imgur.com/3/image', formData, {
+    headers: { Authorization: `Client-ID ${config.imgurClientId}` },
+    timeout: 10000,
+  });
+  return response.data.data.link;
 };
 
 const canManageEvent = (event, user) =>
@@ -66,7 +54,9 @@ exports.createEvent = async (req, res) => {
     });
   } catch (error) {
     console.error('Event creation failed:', error.message);
-    return res.status(500).json({ message: 'Unable to create event' });
+    return res.status(error.status || 500).json({
+      message: error.status === 503 ? error.message : 'Unable to create event',
+    });
   }
 };
 
@@ -114,10 +104,15 @@ exports.updateEvent = async (req, res) => {
     applyEventUpdates(event, req.body);
     if (req.file) event.imagePath = await uploadImage(req.file);
     await event.save();
-    return res.json({ message: 'Event updated successfully', event: new EventDTO(event) });
+    return res.json({
+      message: 'Event updated successfully',
+      event: new EventDTO(event),
+    });
   } catch (error) {
     console.error('Event update failed:', error.message);
-    return res.status(500).json({ message: 'Unable to update event' });
+    return res.status(error.status || 500).json({
+      message: error.status === 503 ? error.message : 'Unable to update event',
+    });
   }
 };
 
@@ -156,7 +151,10 @@ exports.participateInEvent = async (req, res) => {
 
     event.participants.push(req.user.userId);
     await event.save();
-    return res.json({ message: 'Event joined successfully', event: new EventDTO(event) });
+    return res.json({
+      message: 'Event joined successfully',
+      event: new EventDTO(event),
+    });
   } catch (error) {
     console.error('Event participation failed:', error.message);
     return res.status(500).json({ message: 'Unable to join event' });
@@ -180,7 +178,10 @@ exports.unparticipateEvent = async (req, res) => {
     }
 
     await event.save();
-    return res.json({ message: 'Event left successfully', event: new EventDTO(event) });
+    return res.json({
+      message: 'Event left successfully',
+      event: new EventDTO(event),
+    });
   } catch (error) {
     console.error('Event leave failed:', error.message);
     return res.status(500).json({ message: 'Unable to leave event' });
@@ -193,7 +194,10 @@ exports.getEventById = async (req, res) => {
       .populate('participants', 'firstName lastName email role')
       .populate({
         path: 'tasks',
-        populate: { path: 'assignedTo', select: 'firstName lastName email role' },
+        populate: {
+          path: 'assignedTo',
+          select: 'firstName lastName email role',
+        },
       });
     if (!event) return res.status(404).json({ message: 'Event not found' });
 
