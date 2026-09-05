@@ -44,8 +44,8 @@ router.post(
   login
 );
 
-router.post('/refresh-token', refreshToken);
-router.post('/logout', logout);
+router.post('/refresh-token', authLimiter, refreshToken);
+router.post('/logout', authLimiter, logout);
 router.get('/verify-email/:userId/:token', verifyEmail);
 router.post(
   '/reset-password-request',
