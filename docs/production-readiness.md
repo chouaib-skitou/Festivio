@@ -26,7 +26,7 @@ This document records the production-readiness baseline introduced by PR #44.
 
 ## Delivery
 
-CI validates repository integrity, backend quality, frontend build/tests and the complete Compose stack. CodeQL and Dependabot provide security/dependency automation. Release Please coordinates semantic releases, and GitHub Releases publish frontend/backend images to GHCR.
+CI validates repository integrity, backend quality, frontend build/tests and the complete Compose stack. CodeQL and Dependabot provide security/dependency automation. semantic-release creates tags and GitHub Releases from `master`, and GitHub Releases publish frontend/backend images to GHCR.
 
 ## Version policy
 

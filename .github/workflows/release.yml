@@ -1,0 +1,123 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  packages: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Publish release, images and synchronize develop
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out master
+        uses: actions/checkout@v6
+        with:
+          ref: master
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN || github.token }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Install release tooling
+        run: npm install --no-audit --no-fund --package-lock=false
+
+      - name: Publish release
+        id: release
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+        run: |
+          before_sha="$(git rev-parse HEAD)"
+          npm run release
+          after_sha="$(git rev-parse HEAD)"
+
+          if [ "$before_sha" = "$after_sha" ]; then
+            echo "created=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          version="$(node -p "require('./package.json').version")"
+          echo "created=true" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Synchronize release files to develop
+        if: steps.release.outputs.created == 'true'
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          git fetch origin master develop --tags
+          sync_dir="${RUNNER_TEMP}/develop-release-sync"
+          git worktree add --detach "$sync_dir" origin/develop
+          git -C "$sync_dir" checkout origin/master -- package.json backend/package.json frontend/package.json CHANGELOG.md
+
+          if git -C "$sync_dir" diff --quiet HEAD -- package.json backend/package.json frontend/package.json CHANGELOG.md; then
+            echo "develop already contains release metadata ${RELEASE_VERSION}."
+            exit 0
+          fi
+
+          git -C "$sync_dir" config user.name "github-actions[bot]"
+          git -C "$sync_dir" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$sync_dir" add package.json backend/package.json frontend/package.json CHANGELOG.md
+          git -C "$sync_dir" commit -m "chore(release): sync version ${RELEASE_VERSION} to develop [skip ci]"
+          git -C "$sync_dir" push origin HEAD:develop
+
+      - name: Log in to GitHub Container Registry
+        if: steps.release.outputs.created == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        if: steps.release.outputs.created == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and publish release images
+        if: steps.release.outputs.created == 'true'
+        shell: bash
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          short_sha="${GITHUB_SHA::7}"
+
+          docker buildx build \
+            --file backend/Dockerfile \
+            --tag "ghcr.io/${owner}/festivio-backend:latest" \
+            --tag "ghcr.io/${owner}/festivio-backend:${short_sha}" \
+            --tag "ghcr.io/${owner}/festivio-backend:${RELEASE_VERSION}" \
+            --tag "ghcr.io/${owner}/festivio-backend:v${RELEASE_VERSION}" \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            --label "org.opencontainers.image.version=${RELEASE_VERSION}" \
+            --provenance=mode=max \
+            --sbom=true \
+            --push backend
+
+          docker buildx build \
+            --file frontend/Dockerfile \
+            --build-arg REACT_APP_BACKEND_URL=/ \
+            --tag "ghcr.io/${owner}/festivio-frontend:latest" \
+            --tag "ghcr.io/${owner}/festivio-frontend:${short_sha}" \
+            --tag "ghcr.io/${owner}/festivio-frontend:${RELEASE_VERSION}" \
+            --tag "ghcr.io/${owner}/festivio-frontend:v${RELEASE_VERSION}" \
+            --label "org.opencontainers.image.revision=${GITHUB_SHA}" \
+            --label "org.opencontainers.image.version=${RELEASE_VERSION}" \
+            --provenance=mode=max \
+            --sbom=true \
+            --push frontend

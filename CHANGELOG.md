@@ -2,7 +2,7 @@
 
 All notable changes to Festivio are documented in this file.
 
-This project follows Semantic Versioning. Release pull requests, tags and GitHub Releases are managed by Release Please from the `master` branch.
+This project follows Semantic Versioning. Releases, tags and GitHub Releases are created by semantic-release from the `master` branch.
 
 ## [Unreleased]
 
@@ -33,4 +33,4 @@ This project follows Semantic Versioning. Release pull requests, tags and GitHub
 
 ## Versioning and releases
 
-The repository is bootstrapped at version `1.0.0`. Once changes reach `master`, Release Please opens the next semantic-version release PR from Conventional Commit history. Merging that release PR creates the `vX.Y.Z` tag and GitHub Release; publishing the GitHub Release triggers the GHCR image workflow.
+The repository is bootstrapped at version `1.0.0`. Once changes reach `master`, semantic-release analyses Conventional Commit history, updates the shared package versions and `CHANGELOG.md`, creates the `vX.Y.Z` tag and publishes the GitHub Release. Publishing the GitHub Release triggers the GHCR image workflow.
