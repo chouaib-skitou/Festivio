@@ -1,36 +1,66 @@
 import axios from 'axios';
 import useAuthStore from '../stores/authStore';
 
+const baseURL = process.env.REACT_APP_BACKEND_URL || '/';
+
 const axiosInstance = axios.create({
-  baseURL: process.env.REACT_APP_BACKEND_URL || '/',
+  baseURL,
   timeout: 15000,
+  withCredentials: true,
 });
 
-axiosInstance.interceptors.request.use(
-  (config) => {
-    const { accessToken } = useAuthStore.getState();
+const refreshClient = axios.create({
+  baseURL,
+  timeout: 15000,
+  withCredentials: true,
+});
 
-    if (accessToken) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
-    }
+let refreshPromise = null;
 
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+const refreshSession = async () => {
+  if (!refreshPromise) {
+    refreshPromise = refreshClient
+      .post('/api/auth/refresh-token')
+      .then((response) => {
+        useAuthStore.getState().setSession(response.data);
+        return response.data.accessToken;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+
+  return refreshPromise;
+};
+
+axiosInstance.interceptors.request.use((config) => {
+  const { accessToken } = useAuthStore.getState();
+  if (accessToken) {
+    config.headers.Authorization = `Bearer ${accessToken}`;
+  }
+  return config;
+});
 
 axiosInstance.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      const { accessToken, logout } = useAuthStore.getState();
+  async (error) => {
+    const originalRequest = error.config;
+    const { accessToken, clearSession } = useAuthStore.getState();
 
-      if (accessToken) {
-        logout();
-
-        if (window.location.pathname !== '/login') {
-          window.location.assign('/login');
-        }
+    if (
+      error.response?.status === 401 &&
+      accessToken &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !originalRequest._skipAuthRefresh
+    ) {
+      originalRequest._retry = true;
+      try {
+        const nextAccessToken = await refreshSession();
+        originalRequest.headers.Authorization = `Bearer ${nextAccessToken}`;
+        return axiosInstance(originalRequest);
+      } catch (_refreshError) {
+        clearSession();
       }
     }
 
@@ -38,4 +68,5 @@ axiosInstance.interceptors.response.use(
   }
 );
 
+export { refreshClient };
 export default axiosInstance;
