@@ -1,27 +1,30 @@
-// src/routes/PrivateRoutes.js
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import useAuthStore from '../stores/authStore';
 import LandingPage from '../features/LandingPage/LandingPage';
-import ProfilePage from "../features/ProfilePage/ProfilePage";
-import EventPage from "../features/Event/EventPage";
-import EventShow from "../features/Event/EventShow";
-import TaskPage from "../features/Task/TaskPage";
+import ProfilePage from '../features/ProfilePage/ProfilePage';
+import EventPage from '../features/Event/EventPage';
+import EventShow from '../features/Event/EventShow';
+import TaskPage from '../features/Task/TaskPage';
 
 const PrivateRoutes = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
+  const user = useAuthStore((state) => state.user);
 
-  return accessToken ? (
+  if (!accessToken) return <Navigate to="/login" replace />;
+
+  const eventsAllowed = ['ROLE_ADMIN', 'ROLE_ORGANIZER_ADMIN', 'ROLE_PARTICIPANT'].includes(user?.role);
+  const tasksAllowed = ['ROLE_ADMIN', 'ROLE_ORGANIZER_ADMIN', 'ROLE_ORGANIZER'].includes(user?.role);
+
+  return (
     <Routes>
       <Route path="/home/*" element={<LandingPage />} />
-      {/* Add nested private routes here */}
       <Route path="/profile/*" element={<ProfilePage />} />
-      <Route path="/events" element={<EventPage />} />
-      <Route path="/events/:id" element={<EventShow />} />
-      <Route path="/tasks/" element={<TaskPage />} />
+      {eventsAllowed && <Route path="/events" element={<EventPage />} />}
+      {eventsAllowed && <Route path="/events/:id" element={<EventShow />} />}
+      {tasksAllowed && <Route path="/tasks" element={<TaskPage />} />}
+      <Route path="*" element={<Navigate to="/home" replace />} />
     </Routes>
-  ) : (
-    <Navigate to="/login" replace />
   );
 };
 

@@ -5,111 +5,89 @@ import axiosInstance from '../../../api/axiosInstance';
 import useAuthStore from '../../../stores/authStore';
 
 const loginSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  email: z.string().email('Enter a valid email address.'),
+  password: z.string().min(1, 'Password is required.'),
 });
 
 const Login = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const setToken = useAuthStore((state) => state.setToken);
-  const setRefreshToken = useAuthStore((state) => state.setRefreshToken);
-  const setUser = useAuthStore((state) => state.setUser);
+  const setSession = useAuthStore((state) => state.setSession);
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setError('');
     setIsLoading(true);
 
     try {
       loginSchema.parse(formData);
-      const response = await axiosInstance.post('/api/auth/login', formData);
-      console.log(response.data);
-
-      const { token, refreshToken, user } = response.data;
-
-      setToken(token);
-      setRefreshToken(refreshToken);
-      setUser(user);
-
-      navigate('/home');
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        setError(error.errors[0].message);
-      } else if (error.response) {
-        setError(error.response.data.message || 'An error occurred during login');
+      const response = await axiosInstance.post('/api/auth/login', formData, {
+        _skipAuthRefresh: true,
+      });
+      setSession(response.data);
+      navigate('/home', { replace: true });
+    } catch (submitError) {
+      if (submitError instanceof z.ZodError) {
+        setError(submitError.errors[0].message);
+      } else if (submitError.response) {
+        setError(submitError.response.data.message || 'Unable to sign in.');
       } else {
-        setError('Unable to connect to the server');
+        setError('Unable to connect to Festivio.');
       }
     } finally {
       setIsLoading(false);
     }
   };
 
-  const inputClasses = "w-full px-3 py-2 bg-transparent border-b border-gray-200 focus:border-blue-500 focus:outline-none text-gray-700 placeholder-gray-500";
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-sm p-8 space-y-6">
-        <div className="text-center">
-          <h2 className="text-2xl font-semibold text-gray-900">Welcome Back</h2>
-          <p className="mt-2 text-sm text-gray-600">Sign in to access your account and stay connected.</p>
+    <main className="auth-shell">
+      <section className="auth-card" aria-labelledby="login-title">
+        <Link to="/" className="auth-brand">Festivio</Link>
+        <div>
+          <p className="eyebrow">Welcome back</p>
+          <h1 id="login-title">Sign in to your workspace</h1>
+          <p className="auth-subtitle">Manage events, assignments and participation from one place.</p>
         </div>
 
-        {error && (
-          <div className="p-4 rounded-md bg-red-50 text-red-700">
-            {error}
-          </div>
-        )}
+        {error && <div className="auth-alert auth-alert-error">{error}</div>}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
+        <form onSubmit={handleSubmit} className="auth-form">
+          <label>
+            Email
             <input
               type="email"
-              placeholder="Enter your email"
+              autoComplete="email"
               value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              onChange={(event) => setFormData({ ...formData, email: event.target.value })}
               required
-              className={inputClasses}
             />
-          </div>
-
-          <div>
+          </label>
+          <label>
+            Password
             <input
               type="password"
-              placeholder="Enter your password"
+              autoComplete="current-password"
               value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              onChange={(event) => setFormData({ ...formData, password: event.target.value })}
               required
-              className={inputClasses}
             />
+          </label>
+          <div className="auth-row">
+            <span />
+            <Link to="/forgot-password">Forgot password?</Link>
           </div>
-
-          <div className="flex items-center justify-end">
-            <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-500">
-              Forgot your password?
-            </Link>
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-          >
-            {isLoading ? "Signing you in..." : "Sign In"}
+          <button type="submit" className="primary-button full-width" disabled={isLoading}>
+            {isLoading ? 'Signing in…' : 'Sign in'}
           </button>
-
-          <div className="text-center text-sm">
-            <span className="text-gray-600">Don't have an account? </span>
-            <Link to="/register" className="text-blue-600 hover:text-blue-500 font-medium">
-              Create one here.
-            </Link>
-          </div>
         </form>
-      </div>
-    </div>
+
+        <p className="auth-footnote">
+          New to Festivio? <Link to="/register">Create an account</Link>
+        </p>
+      </section>
+    </main>
   );
 };
 

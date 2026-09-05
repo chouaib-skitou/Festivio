@@ -1,189 +1,213 @@
 # Festivio
 
-Festivio is an event planning application designed to streamline the organization and management of events. It provides tools for event creation, participant management, task delegation, and real-time notifications, all while ensuring a user-friendly experience.
+Festivio is an open-source event planning and operations platform for coordinating events, organizers, tasks and participants from one role-aware workspace.
 
-## Features
+The current production-readiness baseline focuses on secure session handling, explicit RBAC, reproducible Docker environments, health checks, CI security gates and a production frontend served by Nginx.
 
-- **User Management**:
-  - Registration and login system.
-  - Role-based access: Organizer, Participant.
-  - Secure authentication using JWT.
+## What Festivio does
 
-- **Event Management**:
-  - Create, update, delete, and manage events.
-  - Invite participants and manage RSVPs.
+- **Event operations** — create and manage online or in-person events.
+- **Participant coordination** — participants can discover, join and leave events.
+- **Task execution** — organizer administrators assign work and organizers update the status of tasks they own.
+- **Role-based access control** — authorization is enforced by the backend for administrators, organizer administrators, organizers and participants.
+- **Secure sessions** — short-lived access tokens stay in memory while refresh tokens are rotated in `HttpOnly` cookies.
+- **Local email testing** — Mailpit captures verification and password-reset emails during local development.
 
-- **Task Management**:
-  - Assign tasks to participants with status tracking.
-  - Notification system for updates.
+## Roles
 
-- **Comments and Discussions**:
-  - Discussion boards for events and tasks.
+| Role | Main permissions | Public registration |
+| --- | --- | --- |
+| `ROLE_ADMIN` | Platform-wide administration | No |
+| `ROLE_ORGANIZER_ADMIN` | Create/manage owned events and their tasks | No |
+| `ROLE_ORGANIZER` | View assigned tasks and update their status | Yes |
+| `ROLE_PARTICIPANT` | Browse events and manage own participation | Yes |
 
-- **Notifications**:
-  - Real-time updates for task assignments, RSVP changes, and event updates.
+Administrative roles are intentionally not accepted from the public registration endpoint.
 
-## Technologies Used
+## Architecture
 
-- **Frontend**:
-  - React (with JavaScript)
-  - React Router
-  - Zustand (state management)
-  - Zod (schema validation)
-  - Tailwind CSS (styling)
-
-- **Backend**:
-  - Node.js
-  - Express
-  - MongoDB (via Mongoose)
-  - JWT (for authentication)
-
-- **DevOps**:
-  - Docker (containerization)
-  - GitHub Actions (CI/CD)
-  - Deployment on Vercel (frontend) and server for backend
-
-## Setup Instructions
-
-### Backend Setup
-
-1. **MongoDB Configuration**:
-   - Create a [MongoDB Atlas account](https://www.mongodb.com/cloud/atlas) or use an existing MongoDB instance.
-   - Obtain the connection string and set it in the `.env` file as `MONGO_URI`.
-
-   - Import the initial collections located in `/backend/config/utils` using the following commands:
-     ```bash
-     mongoimport --uri="<your_mongodb_connection_string>" --collection=users --file=backend/config/utils/users.json --jsonArray
-     mongoimport --uri="<your_mongodb_connection_string>" --collection=tasks --file=backend/config/utils/tasks.json --jsonArray
-     mongoimport --uri="<your_mongodb_connection_string>" --collection=events --file=backend/config/utils/events.json --jsonArray
-     ```
-     Replace `<your_mongodb_connection_string>` with your MongoDB Atlas connection string.
-
-1. **Predefined User Accounts**:
-   - **ROLE_PARTICIPANT**:
-     - Email: `participant1@gmail.com`
-     - Password: `oganizer1`
-
-   - **ROLE_ORGANIZER_ADMIN**:
-     - Email: `oganizer_admin1@gmail.com`
-     - Password: `oganizer1`
-
-   - **ROLE_ORGANIZER**:
-     - Email: `oganizer1@gmail.com`
-     - Password: `oganizer1`
-
-2. **JWT Secrets**:
-   - Generate secrets for `JWT_SECRET` and `JWT_REFRESH_SECRET` using the following command:
-     ```bash
-     node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
-     ```
-   - Add these to the `.env` file:
-     ```env
-     JWT_SECRET=<your_generated_secret>
-     JWT_REFRESH_SECRET=<your_generated_refresh_secret>
-     ```
-
-3. **Mailer Setup**:
-   - Use a Gmail account or any SMTP provider to send emails.
-   - Enable "less secure apps" or generate an app password for Gmail.
-   - Add these to the `.env` file:
-     ```env
-     EMAIL_USER=<your_email@example.com>
-     EMAIL_PASS=<your_app_password>
-     ```
-
-4. **Environment URLs**:
-   - Add the following to your `.env` file:
-     ```env
-     FRONTEND_URL=http://localhost:3000/
-     BACKEND_URL=http://localhost:5000/
-     ```
-
-5. **Install Dependencies and Run**:
-   - Navigate to the `backend` folder:
-     ```bash
-     cd backend
-     npm install
-     npm run dev
-     ```
-   - The backend will start at [http://localhost:5000](http://localhost:5000).
-
-### Imgur API Setup
-
-1. **Create an Imgur Account**:
-   - Go to [Imgur's website](https://imgur.com/) and create an account if you don’t have one.
-
-2. **Register an Application**:
-   - Visit the [Imgur API registration page](https://api.imgur.com/oauth2/addclient).
-   - Select **OAuth 2 without callback URL** as the application type.
-   - Fill in the required details like your application name and description.
-   - Submit the form to generate your **Client ID** and **Client Secret**.
-
-3. **Configure Environment Variables**:
-   - Add the following variables to your `.env` file:
-     ```env
-     IMGUR_CLIENT_ID=<your_imgur_client_id>
-     IMGUR_CLIENT_SECRET=<your_imgur_client_secret>
-     ```
-   - Replace `<your_imgur_client_id>` and `<your_imgur_client_secret>` with the credentials generated in step 2.
-
-4. **Verify the Setup**:
-   - The backend will automatically use these environment variables to upload images to Imgur.
-
-### Frontend Setup
-
-1. **Backend URL Configuration**:
-   - Add the following to the `.env` file in the `frontend` folder:
-     ```env
-     REACT_APP_BACKEND_URL=http://localhost:5000/
-     ```
-
-2. **Install Dependencies and Run**:
-   - Navigate to the `frontend` folder:
-     ```bash
-     cd frontend
-     npm install
-     npm run dev
-     ```
-   - The frontend will start at [http://localhost:3000](http://localhost:3000).
-
-### Docker Setup
-
-For production or local development, you can run the project using **Docker**. Only the **frontend** is exposed publicly, while the backend is accessible internally.
-
-1. Make sure you have **Docker** and **Docker Compose** installed on your machine.
-
-2. Run the following command to start both the frontend and backend containers:
-   ```bash
-   docker-compose up --build
-   ```
-
-3. **Access the application**:
-   - **Frontend**: [http://localhost:3000](http://localhost:3000)
-   - The **backend** is only accessible to the frontend container and is not exposed publicly.
-
-### Project Directory Structure
-
-The `docker-compose.yml` file orchestrates both the frontend and backend containers. Here's a high-level overview:
-
-```plaintext
-.
-├── docker-compose.yml  # Docker Compose configuration
-├── backend/            # Backend code (Node.js & Express)
-│   ├── Dockerfile      # Dockerfile for the backend
-│   └── ...
-├── frontend/           # Frontend code (React)
-│   ├── Dockerfile      # Dockerfile for the frontend
-│   └── ...
+```mermaid
+flowchart LR
+    Browser[React client] --> Nginx[Nginx frontend]
+    Nginx -->|/api| API[Express API]
+    Nginx -->|/images| API
+    API --> Mongo[(MongoDB)]
+    API --> SMTP[SMTP / Mailpit]
+    API -. optional .-> Imgur[Imgur]
 ```
 
-### Why the Backend is Not Exposed
+The production topology exposes the Nginx frontend. The backend is an internal service reached through the same-origin `/api` proxy.
 
-The backend container is not publicly exposed for security purposes. It communicates internally with the frontend container. This setup ensures that the backend endpoints are protected from direct access.
+## Technology
 
-## Final Notes
+**Frontend:** React 18, React Router, Zustand, Zod, Sass/Tailwind build tooling, Nginx.
 
-- For detailed API documentation, refer to the Swagger UI available once the backend is running.
-- Ensure all environment variables are set correctly for both frontend and backend.
-- Feel free to contribute to this project by submitting issues or pull requests on GitHub.
+**Backend:** Node.js 22, Express, MongoDB/Mongoose, JWT, bcrypt, Multer, Nodemailer, Swagger.
 
+**Delivery:** Docker Compose, GitHub Actions, CodeQL, Dependabot, Release Please and GitHub Container Registry.
+
+## Local development with Docker
+
+Requirements: Docker Engine with Docker Compose v2.
+
+```bash
+docker compose up --build
+```
+
+This starts the complete local stack:
+
+| Service | Local address |
+| --- | --- |
+| Festivio | `http://localhost:3000` |
+| Mailpit UI | `http://localhost:8025` |
+| MongoDB | `mongodb://localhost:27017/festivio` |
+
+The backend is not published directly. Nginx forwards `/api` and `/images` to it.
+
+### Load synthetic demo data
+
+After the stack is healthy:
+
+```bash
+docker compose exec backend npm run seed:demo
+```
+
+The seed is **local-only** and refuses to run with `NODE_ENV=production`.
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Admin | `admin@festivio.local` | `Festivio123!` |
+| Organizer admin | `manager@festivio.local` | `Festivio123!` |
+| Organizer | `organizer@festivio.local` | `Festivio123!` |
+| Participant | `participant@festivio.local` | `Festivio123!` |
+
+These identities are synthetic development fixtures; no exported production/user database dumps are tracked in the repository.
+
+## Running without Docker
+
+### Backend
+
+```bash
+cd backend
+cp .env.example .env
+npm install
+npm run dev
+```
+
+Use a reachable MongoDB instance and SMTP service. The default `.env.example` values are intended as documentation; replace secrets before any non-local deployment.
+
+### Frontend
+
+```bash
+cd frontend
+cp .env.example .env
+npm install
+npm start
+```
+
+For direct frontend-to-backend development, set `REACT_APP_BACKEND_URL` to the backend origin. Production images use `/` so requests stay same-origin through Nginx.
+
+## Environment and secrets
+
+Runtime `.env` files are ignored and must never be committed. The repository only tracks `.env.example` templates.
+
+Important backend variables include:
+
+- `MONGO_URI`
+- `JWT_SECRET`
+- `JWT_REFRESH_SECRET`
+- `FRONTEND_URL`
+- `BACKEND_URL`
+- `CORS_ORIGINS`
+- `SMTP_HOST`, `SMTP_PORT`, optional SMTP credentials
+- optional `IMGUR_CLIENT_ID`
+
+Production validation rejects missing database/JWT configuration, short production JWT secrets and wildcard CORS.
+
+## Authentication and security
+
+1. Login returns a short-lived access token to the client.
+2. The access token is stored only in application memory.
+3. The refresh token is written as an `HttpOnly`, `SameSite=Lax` cookie and is never returned to JavaScript.
+4. On reload, the client restores its session via `POST /api/auth/refresh-token`.
+5. Refresh loads the current user from MongoDB, preserving current role changes, rotates the refresh cookie and issues a new access token.
+6. Logout clears the refresh cookie.
+
+Additional controls include explicit CORS origins, request IDs, security headers, API/auth rate limits, 5 MB JPEG/PNG/WebP upload limits, hashed one-time password-reset tokens, generic reset-request responses and backend ownership checks.
+
+## Health and lifecycle
+
+- `GET /health` — process liveness.
+- `GET /ready` — readiness including MongoDB connectivity.
+- `SIGTERM` and `SIGINT` trigger graceful HTTP shutdown and database disconnect.
+
+Docker health checks use the readiness endpoint for dependency ordering.
+
+## Production containers
+
+Create `backend/.env` from the example and provide real production values, then validate/build with:
+
+```bash
+docker compose -f docker-compose.prod.yml config
+docker compose -f docker-compose.prod.yml build
+```
+
+`docker-compose.prod.yml` intentionally does not bundle a production MongoDB or SMTP server. Point the backend at managed or separately operated production services.
+
+## CI and security automation
+
+Pull requests to `develop` or `master` run:
+
+- version synchronization checks;
+- tracked environment/sensitive-fixture hygiene checks;
+- backend lint, formatting and tests;
+- frontend tests and production build;
+- local and production Compose validation;
+- a complete Compose smoke test with MongoDB and Mailpit;
+- synthetic demo seeding and health verification;
+- CodeQL JavaScript/TypeScript analysis.
+
+Dependabot monitors npm, GitHub Actions and Docker dependencies.
+
+## Versioning and releases
+
+The root, backend and frontend share one version. Validate it with:
+
+```bash
+npm run version:check
+```
+
+Release Please runs on `master` and maintains release PRs from Conventional Commit history. When a GitHub Release is published, GitHub Actions builds and pushes:
+
+- `ghcr.io/chouaib-skitou/festivio-backend`
+- `ghcr.io/chouaib-skitou/festivio-frontend`
+
+Tags follow semantic versioning (`vX.Y.Z`).
+
+## Branch workflow
+
+- Feature work targets `develop` through pull requests.
+- Production promotion is handled through the repository's normal review flow.
+- After `master` receives commits not yet present in `develop`, the sync workflow opens a **`master → develop` pull request**.
+- The sync workflow never force-pushes or blindly overwrites `develop`.
+
+## API documentation
+
+Swagger UI is available at `/api/docs` when `SWAGGER_ENABLED=true`. It is disabled by default in production.
+
+## Repository layout
+
+```text
+.
+├── .github/workflows/      # CI, CodeQL, releases, GHCR and branch sync
+├── backend/                # Express API, models, RBAC and demo seed
+├── frontend/               # React UI and production Nginx image
+├── docs/                   # Architecture/security/production notes
+├── docker-compose.yml      # Complete local stack
+├── docker-compose.prod.yml # Production frontend/backend topology
+└── scripts/                # Repository integrity checks
+```
+
+## License
+
+Festivio is licensed under the MIT License. See `LICENSE`.

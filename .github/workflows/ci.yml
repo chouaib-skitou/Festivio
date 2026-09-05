@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  push:
+    branches: [master, develop]
+  pull_request:
+    branches: [master, develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repository:
+    name: Repository integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - name: Check synchronized versions
+        run: npm run version:check
+      - name: Check release configuration
+        run: |
+          node -e "JSON.parse(require('fs').readFileSync('release-please-config.json')); JSON.parse(require('fs').readFileSync('.release-please-manifest.json'))"
+          test -s CHANGELOG.md
+          grep -q '"changelog-path": "CHANGELOG.md"' release-please-config.json
+          grep -q '"include-v-in-tag": true' release-please-config.json
+          node -e "const p=require('./backend/package.json'); if (!p.dependencies['csrf-csrf']) process.exit(1)"
+      - name: Check environment and fixture hygiene
+        shell: bash
+        run: |
+          if git ls-files | grep -Eq '(^|/)\.env$'; then
+            echo "Tracked .env file detected" >&2
+            exit 1
+          fi
+          for fixture in backend/config/utils/users.json backend/config/utils/events.json backend/config/utils/tasks.json; do
+            if git ls-files --error-unmatch "$fixture" >/dev/null 2>&1; then
+              echo "Sensitive legacy fixture is still tracked: $fixture" >&2
+              exit 1
+            fi
+          done
+
+  backend:
+    name: Backend quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - run: npm install --no-audit --no-fund
+        name: Install dependencies
+      - run: npm run lint
+        name: Lint
+      - run: npm run format:check
+        name: Check formatting
+      - run: npm run test:ci
+        name: Test
+
+  frontend:
+    name: Frontend quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          package-manager-cache: false
+      - run: npm install --no-audit --no-fund
+        name: Install dependencies
+      - name: Test
+        env:
+          CI: true
+        run: npm test -- --watchAll=false --runInBand
+      - name: Build
+        env:
+          CI: true
+          REACT_APP_BACKEND_URL: /
+        run: npm run build
+
+  containers:
+    name: Compose smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: [repository, backend, frontend]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Validate local Compose configuration
+        run: docker compose config
+      - name: Validate production Compose configuration
+        run: |
+          cp backend/.env.example backend/.env
+          docker compose -f docker-compose.prod.yml config
+          rm backend/.env
+      - name: Build and start local stack
+        run: docker compose up -d --build --wait
+      - name: Seed synthetic demo data
+        run: docker compose exec -T backend npm run seed:demo
+      - name: Verify frontend and backend health
+        run: |
+          curl --fail --retry 5 --retry-delay 2 http://localhost:3000/healthz
+          docker compose exec -T backend node -e "require('http').get('http://127.0.0.1:5000/ready',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+      - name: Stop local stack
+        if: always()
+        run: docker compose down -v --remove-orphans

@@ -1,40 +1,24 @@
 const request = require('supertest');
 const express = require('express');
-const { register, login, refreshToken, verifyEmail, resetPassword, requestPasswordReset } = require('../controllers/authController');
-const { check } = require('express-validator');
+const { refreshToken, logout } = require('../controllers/authController');
+const { authLimiter } = require('../middlewares/rateLimiters');
+
 const app = express();
 app.use(express.json());
+app.post('/api/auth/refresh-token', authLimiter, refreshToken);
+app.post('/api/auth/logout', authLimiter, logout);
 
-app.post('/api/auth/refresh-token', refreshToken);
-app.get('/api/auth/verify-email/:userId/:token', verifyEmail);
-app.post('/api/auth/reset-password-request', requestPasswordReset);
-app.post('/api/auth/reset-password/:token', resetPassword);
-
-describe('Authentication API', () => {
-  let userData;
-
-  beforeEach(() => {
-    userData = {
-      username: 'testuser',
-      email: 'yassinerhourri@gmail.com',
-      password: '123456',
-      role: 'ROLE_PARTICIPANT',
-    };
+describe('Authentication session API', () => {
+  it('returns 401 when no HttpOnly refresh cookie is provided', async () => {
+    const response = await request(app).post('/api/auth/refresh-token').send();
+    expect(response.status).toBe(401);
+    expect(response.body.message).toBe('Refresh session required');
   });
 
-  describe('POST /api/auth/refresh-token', () => {
-    it('should return 401 if no refresh token is provided', async () => {
-      const response = await request(app)
-        .post('/api/auth/refresh-token')
-        .send();
-
-      expect(response.status).toBe(401);
-      expect(response.body.message).toBe('Refresh token required');
-    });
-  });
-  afterAll(async () => {
-    setTimeout(() => {
-      process.exit(0);
-    }, 3000);
+  it('clears the refresh cookie on logout', async () => {
+    const response = await request(app).post('/api/auth/logout').send();
+    expect(response.status).toBe(204);
+    expect(response.headers['set-cookie'][0]).toContain('festivio_refresh=;');
+    expect(response.headers['set-cookie'][0]).toContain('HttpOnly');
   });
 });

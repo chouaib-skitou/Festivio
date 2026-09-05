@@ -1,20 +1,25 @@
-const jwt = require("jsonwebtoken");
+const jwt = require('jsonwebtoken');
 
 const authMiddleware = (req, res, next) => {
-  const token = req.headers.authorization?.split(" ")[1]; // Get token from Authorization header
+  const authorization = req.get('authorization');
+
+  if (!authorization?.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Access token required' });
+  }
+
+  const token = authorization.slice('Bearer '.length).trim();
 
   if (!token) {
-    return res.status(401).json({ message: "Access token required" });
+    return res.status(401).json({ message: 'Access token required' });
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // Attach decoded token to req.user
-    console.log("Decoded User:", req.user); // Log user details
-    next();
-  } catch (error) {
-    console.error("Token verification failed:", error.message);
-    res.status(401).json({ message: "Invalid token" });
+    req.user = jwt.verify(token, process.env.JWT_SECRET, {
+      algorithms: ['HS256'],
+    });
+    return next();
+  } catch (_error) {
+    return res.status(401).json({ message: 'Invalid token' });
   }
 };
 

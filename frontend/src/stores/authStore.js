@@ -1,35 +1,22 @@
 import create from 'zustand';
 
 const useAuthStore = create((set) => ({
-  accessToken: localStorage.getItem('accessToken') || null,
-  refreshToken: localStorage.getItem('refreshToken') || null,
-  user: JSON.parse(localStorage.getItem('user')) || null, // Get user data from localStorage
+  accessToken: null,
+  user: null,
+  hydrated: false,
 
-  setToken: (accessToken) => {
-    console.log('Setting accessToken:', accessToken);
-    localStorage.setItem('accessToken', accessToken);
-    set({ accessToken });
-  },
+  setSession: ({ accessToken, user }) =>
+    set({
+      accessToken: accessToken || null,
+      user: user || null,
+    }),
 
-  setRefreshToken: (refreshToken) => {
-    console.log('Setting refreshToken:', refreshToken);
-    localStorage.setItem('refreshToken', refreshToken);
-    set({ refreshToken });
-  },
+  setToken: (accessToken) => set({ accessToken: accessToken || null }),
+  setUser: (user) => set({ user: user || null }),
+  setHydrated: (hydrated) => set({ hydrated }),
 
-  setUser: (user) => {
-    console.log('Setting user:', user);
-    localStorage.setItem('user', JSON.stringify(user));
-    set({ user });
-  },
-
-  logout: () => {
-    console.log('Logging out');
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
-    set({ accessToken: null, refreshToken: null, user: null });
-  },
+  clearSession: () => set({ accessToken: null, user: null }),
+  logout: () => set({ accessToken: null, user: null }),
 }));
 
 export default useAuthStore;

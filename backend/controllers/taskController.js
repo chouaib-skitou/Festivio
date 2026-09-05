@@ -1,131 +1,212 @@
-// controllers/taskController.js
+const mongoose = require('mongoose');
 const Task = require('../models/Task');
-const TaskDTO = require('../dtos/TaskDTO');
 const Event = require('../models/Event');
+const User = require('../models/User');
+const TaskDTO = require('../dtos/TaskDTO');
+const { ROLES } = require('../constants/roles');
 
-// Create a task
+const OBJECT_ID_PATTERN = /^[0-9a-fA-F]{24}$/;
+const TASK_STATUSES = new Set(['Pending', 'In Progress', 'Completed']);
+
+const toObjectId = (value) => {
+  if (typeof value !== 'string' || !OBJECT_ID_PATTERN.test(value)) return null;
+  return new mongoose.Types.ObjectId(value);
+};
+
+const canManageEvent = (event, user) =>
+  user.role === ROLES.ADMIN ||
+  (user.role === ROLES.ORGANIZER_ADMIN &&
+    event.organizer.toString() === user.userId);
+
+const loadManagedEvent = async (eventId, user) => {
+  const safeEventId =
+    eventId instanceof mongoose.Types.ObjectId ? eventId : toObjectId(eventId);
+  if (!safeEventId) return { status: 400, message: 'Invalid event id' };
+
+  const event = await Event.findOne({
+    _id: { $eq: safeEventId },
+  }).setOptions({ sanitizeFilter: true, strictQuery: true });
+  if (!event) return { status: 404, message: 'Event not found' };
+  if (!canManageEvent(event, user)) {
+    return { status: 403, message: 'You cannot manage tasks for this event' };
+  }
+  return { event };
+};
+
 exports.createTask = async (req, res) => {
   try {
-    const { title, description, status, assignedTo, event } = req.body;
-
-    // Ensure required fields are provided
-    if (!title || !assignedTo || !event) {
-      return res.status(400).json({ message: 'Title, assignedTo, and event are required' });
+    const { title, description, status, assignedTo, event: eventId } = req.body;
+    if (!title || !assignedTo || !eventId) {
+      return res
+        .status(400)
+        .json({ message: 'title, assignedTo and event are required' });
     }
 
-    // Create the task
-    const task = new Task({
-      title,
-      description,
-      status: status || 'Pending', // Default to 'Pending' if not provided
-      assignedTo,
-      event,
-      createdBy: req.user.userId, // Get `createdBy` directly from `req.user`
+    const safeAssigneeId = toObjectId(assignedTo);
+    if (!safeAssigneeId) {
+      return res.status(400).json({ message: 'Invalid assignee id' });
+    }
+    if (status !== undefined && !TASK_STATUSES.has(status)) {
+      return res.status(400).json({ message: 'Invalid task status' });
+    }
+
+    const eventResult = await loadManagedEvent(eventId, req.user);
+    if (!eventResult.event) {
+      return res
+        .status(eventResult.status)
+        .json({ message: eventResult.message });
+    }
+
+    const assignee = await User.findById(safeAssigneeId);
+    if (!assignee || assignee.role !== ROLES.ORGANIZER) {
+      return res
+        .status(400)
+        .json({ message: 'Tasks can only be assigned to organizers' });
+    }
+
+    const task = await Task.create({
+      title: String(title).trim(),
+      description:
+        description === undefined ? undefined : String(description).trim(),
+      status: status || 'Pending',
+      assignedTo: safeAssigneeId,
+      event: eventResult.event._id,
+      createdBy: req.user.userId,
     });
+    eventResult.event.tasks.push(task._id);
+    await eventResult.event.save();
 
-    await task.save();
-
-    // Add the task to the event's tasks array
-    const updatedEvent = await Event.findByIdAndUpdate(
-      event,
-      { $push: { tasks: task._id } },
-      { new: true }
-    );
-
-    if (!updatedEvent) {
-      return res.status(404).json({ message: 'Event not found' });
-    }
-
-    res.status(201).json({
+    return res.status(201).json({
       message: 'Task created successfully',
       task: new TaskDTO(task),
     });
   } catch (error) {
-    console.error('Error creating task:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Task creation failed:', error.message);
+    return res.status(500).json({ message: 'Unable to create task' });
   }
 };
 
-
-
-// Get all tasks
 exports.getAllTasks = async (req, res) => {
   try {
-
-      let tasks;
-
-      if (req.user.role === 'ROLE_ORGANIZER') {
-          // If the user is an organizer, get only their tasks
-          tasks = await Task.find({ assignedTo: req.user.userId });
-      } else {
-          // Otherwise, retrieve all tasks
-          tasks = await Task.find();
+    let filter = {};
+    if (req.user.role === ROLES.ORGANIZER) {
+      filter = { assignedTo: toObjectId(req.user.userId) };
+    } else if (req.user.role === ROLES.ORGANIZER_ADMIN) {
+      const organizerId = toObjectId(req.user.userId);
+      if (!organizerId) {
+        return res.status(401).json({ message: 'Invalid authenticated user' });
       }
+      const eventIds = await Event.find({ organizer: organizerId }).distinct('_id');
+      filter = { event: { $in: eventIds } };
+    } else if (req.user.role !== ROLES.ADMIN) {
+      return res
+        .status(403)
+        .json({ message: 'Tasks are not available for this role' });
+    }
 
-      const taskDTOs = tasks.map((task) => new TaskDTO(task)); // Map tasks to DTOs
-
-      res.status(200).json({ tasks: taskDTOs });
+    const tasks = await Task.find(filter)
+      .populate('assignedTo', 'firstName lastName email role')
+      .sort({ createdAt: -1 });
+    return res.json({ tasks: tasks.map((task) => new TaskDTO(task)) });
   } catch (error) {
-      res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Task listing failed:', error.message);
+    return res.status(500).json({ message: 'Unable to fetch tasks' });
   }
 };
 
-  
-
-// Update task
-exports.updateTask = async (req, res) => {
+const updateTask = async (req, res) => {
   try {
-    const { id } = req.params;
-    const updates = req.body;
+    const safeTaskId = toObjectId(req.params.id);
+    if (!safeTaskId) return res.status(400).json({ message: 'Invalid task id' });
 
-    const task = await Task.findByIdAndUpdate(id, updates, { new: true });
-    if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
+    const task = await Task.findById(safeTaskId);
+    if (!task) return res.status(404).json({ message: 'Task not found' });
+
+    if (req.user.role === ROLES.ORGANIZER) {
+      if (task.assignedTo.toString() !== req.user.userId) {
+        return res
+          .status(403)
+          .json({ message: 'You can only update your assigned tasks' });
+      }
+      const keys = Object.keys(req.body);
+      if (keys.length !== 1 || keys[0] !== 'status') {
+        return res
+          .status(403)
+          .json({ message: 'Organizers can only update task status' });
+      }
+      if (!TASK_STATUSES.has(req.body.status)) {
+        return res.status(400).json({ message: 'Invalid task status' });
+      }
+      task.status = req.body.status;
+    } else {
+      const eventResult = await loadManagedEvent(task.event, req.user);
+      if (!eventResult.event) {
+        return res
+          .status(eventResult.status)
+          .json({ message: eventResult.message });
+      }
+
+      if (req.body.title !== undefined) task.title = String(req.body.title).trim();
+      if (req.body.description !== undefined) {
+        task.description = String(req.body.description).trim();
+      }
+      if (req.body.status !== undefined) {
+        if (!TASK_STATUSES.has(req.body.status)) {
+          return res.status(400).json({ message: 'Invalid task status' });
+        }
+        task.status = req.body.status;
+      }
+      if (req.body.assignedTo !== undefined) {
+        const safeAssigneeId = toObjectId(req.body.assignedTo);
+        if (!safeAssigneeId) {
+          return res.status(400).json({ message: 'Invalid assignee id' });
+        }
+        const assignee = await User.findById(safeAssigneeId);
+        if (!assignee || assignee.role !== ROLES.ORGANIZER) {
+          return res
+            .status(400)
+            .json({ message: 'Tasks can only be assigned to organizers' });
+        }
+        task.assignedTo = safeAssigneeId;
+      }
     }
 
-    res.status(200).json({
+    await task.save();
+    return res.json({
       message: 'Task updated successfully',
       task: new TaskDTO(task),
     });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Task update failed:', error.message);
+    return res.status(500).json({ message: 'Unable to update task' });
   }
 };
 
-// Delete task
+exports.updateTask = updateTask;
+exports.patchTask = updateTask;
+
 exports.deleteTask = async (req, res) => {
   try {
-    const { id } = req.params;
+    const safeTaskId = toObjectId(req.params.id);
+    if (!safeTaskId) return res.status(400).json({ message: 'Invalid task id' });
 
-    const task = await Task.findByIdAndDelete(id);
-    if (!task) {
-      return res.status(404).json({ message: 'Task not found' });
+    const task = await Task.findById(safeTaskId);
+    if (!task) return res.status(404).json({ message: 'Task not found' });
+    const eventResult = await loadManagedEvent(task.event, req.user);
+    if (!eventResult.event) {
+      return res
+        .status(eventResult.status)
+        .json({ message: eventResult.message });
     }
 
-    res.status(200).json({ message: 'Task deleted successfully' });
+    await task.deleteOne();
+    eventResult.event.tasks = eventResult.event.tasks.filter(
+      (taskId) => taskId.toString() !== task._id.toString()
+    );
+    await eventResult.event.save();
+    return res.json({ message: 'Task deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Task deletion failed:', error.message);
+    return res.status(500).json({ message: 'Unable to delete task' });
   }
 };
-
-
-// Patch task
-exports.patchTask = async (req, res) => {
-    try {
-      const { id } = req.params;
-      const updates = req.body; // Partial updates from the client
-  
-      const task = await Task.findByIdAndUpdate(id, updates, { new: true });
-      if (!task) {
-        return res.status(404).json({ message: 'Task not found' });
-      }
-  
-      res.status(200).json({
-        message: 'Task updated successfully',
-        task: new TaskDTO(task),
-      });
-    } catch (error) {
-      res.status(500).json({ message: 'Server error', error: error.message });
-    }
-  };
-  

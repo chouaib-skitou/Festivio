@@ -1,91 +1,40 @@
 import React from 'react';
-import {
-    MDBCol,
-    MDBContainer,
-    MDBRow,
-    MDBCard,
-    MDBCardText,
-    MDBCardBody,
-    MDBCardImage,
-    MDBBtn,
-} from 'mdb-react-ui-kit';
+import useAuthStore from '../../stores/authStore';
+
+const roleLabels = {
+  ROLE_ADMIN: 'Administrator',
+  ROLE_ORGANIZER_ADMIN: 'Organizer administrator',
+  ROLE_ORGANIZER: 'Organizer',
+  ROLE_PARTICIPANT: 'Participant',
+};
 
 export default function ProfilePage() {
-    return (
-        <section>
-            <MDBContainer className="py-5">
+  const user = useAuthStore((state) => state.user);
+  const initials = user?.fullName
+    ?.split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase() || 'F';
 
-                <MDBRow className="mt-4">
-                    <MDBCol lg="4">
-                        <MDBCard className="mb-4">
-                            <MDBCardBody className="text-center">
-                                <MDBCardImage
-                                    src="https://mdbcdn.b-cdn.net/img/Photos/new-templates/bootstrap-chat/ava3.webp"
-                                    alt="avatar"
-                                    className="rounded-circle"
-                                    style={{ width: '150px' }}
-                                    fluid />
-                                <p className="text-muted mb-1">Full Stack Developer</p>
-                                <p className="text-muted mb-4">Bay Area, San Francisco, CA</p>
-                                <div className="d-flex justify-content-center mb-2">
-                                    <MDBBtn>Follow</MDBBtn>
-                                    <MDBBtn outline className="ms-1">Message</MDBBtn>
-                                </div>
-                            </MDBCardBody>
-                        </MDBCard>
-                    </MDBCol>
-                    <MDBCol lg="8">
-                        <MDBCard className="mb-4">
-                            <MDBCardBody>
-                                <MDBRow>
-                                    <MDBCol sm="3">
-                                        <MDBCardText>Full Name</MDBCardText>
-                                    </MDBCol>
-                                    <MDBCol sm="9">
-                                        <MDBCardText className="text-muted">Johnatan Smith</MDBCardText>
-                                    </MDBCol>
-                                </MDBRow>
-                                <hr />
-                                <MDBRow>
-                                    <MDBCol sm="3">
-                                        <MDBCardText>Email</MDBCardText>
-                                    </MDBCol>
-                                    <MDBCol sm="9">
-                                        <MDBCardText className="text-muted">example@example.com</MDBCardText>
-                                    </MDBCol>
-                                </MDBRow>
-                                <hr />
-                                <MDBRow>
-                                    <MDBCol sm="3">
-                                        <MDBCardText>Phone</MDBCardText>
-                                    </MDBCol>
-                                    <MDBCol sm="9">
-                                        <MDBCardText className="text-muted">(097) 234-5678</MDBCardText>
-                                    </MDBCol>
-                                </MDBRow>
-                                <hr />
-                                <MDBRow>
-                                    <MDBCol sm="3">
-                                        <MDBCardText>Mobile</MDBCardText>
-                                    </MDBCol>
-                                    <MDBCol sm="9">
-                                        <MDBCardText className="text-muted">(098) 765-4321</MDBCardText>
-                                    </MDBCol>
-                                </MDBRow>
-                                <hr />
-                                <MDBRow>
-                                    <MDBCol sm="3">
-                                        <MDBCardText>Address</MDBCardText>
-                                    </MDBCol>
-                                    <MDBCol sm="9">
-                                        <MDBCardText className="text-muted">Bay Area, San Francisco, CA</MDBCardText>
-                                    </MDBCol>
-                                </MDBRow>
-                            </MDBCardBody>
-                        </MDBCard>
-                    </MDBCol>
-                </MDBRow>
-            </MDBContainer>
-        </section>
-    );
+  return (
+    <main className="private-shell profile-page">
+      <div className="page-heading">
+        <div><p className="eyebrow">Account</p><h1>Your profile</h1><p>Your current Festivio identity and access level.</p></div>
+      </div>
+      <section className="profile-card">
+        <div className="profile-avatar">{initials}</div>
+        <div className="profile-copy">
+          <h2>{user?.fullName || user?.username || 'Festivio user'}</h2>
+          <p>{user?.email}</p>
+          <span className="role-pill">{roleLabels[user?.role] || user?.role}</span>
+        </div>
+      </section>
+      <section className="profile-details">
+        <div><span>Username</span><strong>{user?.username || '—'}</strong></div>
+        <div><span>Email verification</span><strong>{user?.isVerified ? 'Verified' : 'Pending'}</strong></div>
+        <div><span>Role</span><strong>{roleLabels[user?.role] || user?.role || '—'}</strong></div>
+      </section>
+    </main>
+  );
 }
