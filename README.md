@@ -44,7 +44,7 @@ The production topology exposes the Nginx frontend. The backend is an internal s
 
 **Backend:** Node.js 22, Express, MongoDB/Mongoose, JWT, bcrypt, Multer, Nodemailer, Swagger.
 
-**Delivery:** Docker Compose, GitHub Actions, CodeQL, Dependabot, Release Please and GitHub Container Registry.
+**Delivery:** Docker Compose, GitHub Actions, CodeQL, Dependabot, semantic-release and GitHub Container Registry.
 
 ## Local development with Docker
 
@@ -177,7 +177,7 @@ The root, backend and frontend share one version. Validate it with:
 npm run version:check
 ```
 
-Release Please runs on `master` and maintains release PRs from Conventional Commit history. When a GitHub Release is published, GitHub Actions builds and pushes:
+semantic-release runs on `master`, analyses Conventional Commit history, updates the shared package versions and `CHANGELOG.md`, creates the `vX.Y.Z` tag and publishes the GitHub Release directly. When a GitHub Release is published, GitHub Actions builds and pushes:
 
 - `ghcr.io/chouaib-skitou/festivio-backend`
 - `ghcr.io/chouaib-skitou/festivio-frontend`
@@ -188,7 +188,8 @@ Tags follow semantic versioning (`vX.Y.Z`).
 
 - Feature work targets `develop` through pull requests.
 - Production promotion is handled through the repository's normal review flow.
-- After `master` receives commits not yet present in `develop`, the sync workflow opens a **`master → develop` pull request**.
+- Release commits are created on `master` with `[skip ci]`.
+- Release metadata is synchronized back to `develop` directly with `[skip ci]`, without opening a sync pull request.
 - The sync workflow never force-pushes or blindly overwrites `develop`.
 
 ## API documentation
@@ -205,7 +206,7 @@ Swagger UI is available at `/api/docs` when `SWAGGER_ENABLED=true`. It is disabl
 ├── docs/                   # Architecture/security/production notes
 ├── docker-compose.yml      # Complete local stack
 ├── docker-compose.prod.yml # Production frontend/backend topology
-└── scripts/                # Repository integrity checks
+└── scripts/                # Repository integrity checks and release versioning
 ```
 
 ## License
