@@ -1,0 +1,37 @@
+name: Sync master to develop
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  open-sync-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Open master to develop PR when needed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          git fetch origin develop master
+          if [ "$(git rev-list --count origin/develop..origin/master)" -eq 0 ]; then
+            echo "develop already contains master"
+            exit 0
+          fi
+          existing=$(gh pr list --state open --base develop --head master --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            echo "Sync PR #$existing already exists"
+            exit 0
+          fi
+          gh pr create \
+            --base develop \
+            --head master \
+            --title "chore: sync master into develop" \
+            --body "Automated synchronization PR. Merge normally after checks pass; this workflow never force-updates develop."
