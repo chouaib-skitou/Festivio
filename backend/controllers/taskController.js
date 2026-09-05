@@ -23,7 +23,10 @@ const loadManagedEvent = async (eventId, user) => {
     eventId instanceof mongoose.Types.ObjectId ? eventId : toObjectId(eventId);
   if (!safeEventId) return { status: 400, message: 'Invalid event id' };
 
-  const event = await Event.findById(safeEventId);
+  const event = await Event.findOne({ _id: safeEventId }).setOptions({
+    sanitizeFilter: true,
+    strictQuery: true,
+  });
   if (!event) return { status: 404, message: 'Event not found' };
   if (!canManageEvent(event, user)) {
     return { status: 403, message: 'You cannot manage tasks for this event' };
