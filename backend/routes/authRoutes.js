@@ -10,8 +10,11 @@ const {
   requestPasswordReset,
 } = require('../controllers/authController');
 const { authLimiter } = require('../middlewares/rateLimiters');
+const { issueCsrfToken } = require('../middlewares/csrfMiddleware');
 
 const router = express.Router();
+
+router.get('/csrf-token', issueCsrfToken);
 
 router.post(
   '/register',

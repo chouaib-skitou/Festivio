@@ -88,7 +88,7 @@ const sendEmail = async (to, subject, html) => {
     if (config.isProduction) {
       throw new Error('Email transport is not configured');
     }
-    console.info(`Email skipped in local development: ${subject} -> ${to}`);
+    console.info(`Email skipped in local development: ${subject}`);
     return;
   }
 
@@ -125,7 +125,9 @@ exports.register = async (req, res) => {
     const normalizedEmail = email.trim().toLowerCase();
     const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
-      return res.status(400).json({ message: 'An account already exists for this email.' });
+      return res.status(400).json({
+        message: 'An account already exists for this email.',
+      });
     }
 
     const user = new User({
@@ -153,7 +155,8 @@ exports.register = async (req, res) => {
     );
 
     return res.status(201).json({
-      message: 'Registration successful. Check your email to verify your account.',
+      message:
+        'Registration successful. Check your email to verify your account.',
     });
   } catch (error) {
     console.error('Registration failed:', error.message);
@@ -185,7 +188,9 @@ exports.verifyEmail = async (req, res) => {
 
     return res.redirect(`${config.frontendUrl}/login?verified=1`);
   } catch (_error) {
-    return res.status(400).json({ message: 'Invalid or expired verification token' });
+    return res
+      .status(400)
+      .json({ message: 'Invalid or expired verification token' });
   }
 };
 
@@ -197,7 +202,9 @@ exports.login = async (req, res) => {
 
   try {
     const normalizedEmail = req.body.email.trim().toLowerCase();
-    const user = await User.findOne({ email: normalizedEmail }).select('+password');
+    const user = await User.findOne({ email: normalizedEmail }).select(
+      '+password'
+    );
 
     if (!user || !(await bcrypt.compare(req.body.password, user.password))) {
       return res.status(401).json({ message: 'Invalid credentials' });
@@ -286,7 +293,9 @@ exports.requestPasswordReset = async (req, res) => {
     return res.json(genericResponse);
   } catch (error) {
     console.error('Password reset request failed:', error.message);
-    return res.status(500).json({ message: 'Unable to process password reset request' });
+    return res
+      .status(500)
+      .json({ message: 'Unable to process password reset request' });
   }
 };
 

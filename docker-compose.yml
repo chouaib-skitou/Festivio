@@ -39,12 +39,14 @@ services:
       MONGO_URI: mongodb://mongo:27017/festivio
       JWT_SECRET: local-development-access-secret-change-me-123456789
       JWT_REFRESH_SECRET: local-development-refresh-secret-change-me-987654321
+      CSRF_SECRET: local-development-csrf-secret-change-me-246813579
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-FestivioLocal123!}
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
       SMTP_SECURE: "false"
       EMAIL_FROM: Festivio <noreply@festivio.local>
       FRONTEND_URL: http://localhost:${FRONTEND_PORT:-3000}
-      BACKEND_URL: http://localhost:${FRONTEND_PORT:-3000}
+      BACKEND_URL: http://localhost:5000
       CORS_ORIGINS: http://localhost:${FRONTEND_PORT:-3000}
       SWAGGER_ENABLED: "true"
     restart: unless-stopped
@@ -59,7 +61,13 @@ services:
       mailpit:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:5000/ready',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://127.0.0.1:5000/ready',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))",
+        ]
       interval: 10s
       timeout: 3s
       retries: 10

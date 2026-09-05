@@ -9,14 +9,16 @@
     "seed:demo": "node scripts/seed.js",
     "lint": "eslint .",
     "format": "prettier --write . --ignore-path .prettierignore",
-    "format:check": "prettier --check \"server.js\" \"config/db.js\" \"middlewares/authMiddleware.js\"",
+    "format:check": "prettier --check \"server.js\" \"config/*.js\" \"constants/*.js\" \"middlewares/*.js\"",
     "test": "jest",
     "test:ci": "jest --runInBand --detectOpenHandles"
   },
   "dependencies": {
     "axios": "^1.7.9",
     "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "csrf-csrf": "^4.0.3",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "express-rate-limit": "^7.5.0",

@@ -42,6 +42,13 @@ const config = Object.freeze({
   mongoMaxPoolSize: parseInteger(process.env.MONGO_MAX_POOL_SIZE, 10),
   jwtSecret: process.env.JWT_SECRET,
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET,
+  csrfSecret:
+    process.env.CSRF_SECRET ||
+    (nodeEnv === 'test'
+      ? 'festivio-test-csrf-secret-32-characters-minimum'
+      : undefined),
+  csrfSessionCookieName:
+    process.env.CSRF_SESSION_COOKIE_NAME || 'festivio_csrf_session',
   accessTokenTtl: process.env.ACCESS_TOKEN_TTL || '15m',
   refreshTokenTtl: process.env.REFRESH_TOKEN_TTL || '30d',
   refreshCookieName: process.env.REFRESH_COOKIE_NAME || 'festivio_refresh',
@@ -71,7 +78,12 @@ const config = Object.freeze({
 
 const validateEnv = () => {
   const errors = [];
-  const required = ['MONGO_URI', 'JWT_SECRET', 'JWT_REFRESH_SECRET'];
+  const required = [
+    'MONGO_URI',
+    'JWT_SECRET',
+    'JWT_REFRESH_SECRET',
+    'CSRF_SECRET',
+  ];
 
   if (config.isProduction) {
     required.push('FRONTEND_URL');
@@ -91,6 +103,10 @@ const validateEnv = () => {
     errors.push(
       'JWT_REFRESH_SECRET must contain at least 32 characters in production'
     );
+  }
+
+  if (config.isProduction && config.csrfSecret?.length < 32) {
+    errors.push('CSRF_SECRET must contain at least 32 characters in production');
   }
 
   if (config.isProduction && config.corsOrigins.includes('*')) {

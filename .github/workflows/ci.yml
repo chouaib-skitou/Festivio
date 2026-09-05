@@ -26,6 +26,13 @@ jobs:
           package-manager-cache: false
       - name: Check synchronized versions
         run: npm run version:check
+      - name: Check release configuration
+        run: |
+          node -e "JSON.parse(require('fs').readFileSync('release-please-config.json')); JSON.parse(require('fs').readFileSync('.release-please-manifest.json'))"
+          test -s CHANGELOG.md
+          grep -q '"changelog-path": "CHANGELOG.md"' release-please-config.json
+          grep -q '"include-v-in-tag": true' release-please-config.json
+          node -e "const p=require('./backend/package.json'); if (!p.dependencies['csrf-csrf']) process.exit(1)"
       - name: Check environment and fixture hygiene
         shell: bash
         run: |

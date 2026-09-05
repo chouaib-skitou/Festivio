@@ -34,16 +34,13 @@ userSchema.methods.register = async function register() {
 };
 
 userSchema.statics.login = async function login(email, password) {
-  const user = await this.findOne({ email: email.toLowerCase() }).select('+password');
+  const user = await this.findOne({ email: email.toLowerCase() }).select(
+    '+password'
+  );
   if (user && (await bcrypt.compare(password, user.password))) {
     return user;
   }
   throw new Error('Invalid email or password');
-};
-
-userSchema.methods.updateProfile = function updateProfile(updateData) {
-  Object.assign(this, updateData);
-  return this.save();
 };
 
 module.exports = mongoose.model('User', userSchema);
