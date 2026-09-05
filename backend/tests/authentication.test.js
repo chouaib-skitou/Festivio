@@ -1,11 +1,12 @@
 const request = require('supertest');
 const express = require('express');
 const { refreshToken, logout } = require('../controllers/authController');
+const { authLimiter } = require('../middlewares/rateLimiters');
 
 const app = express();
 app.use(express.json());
-app.post('/api/auth/refresh-token', refreshToken);
-app.post('/api/auth/logout', logout);
+app.post('/api/auth/refresh-token', authLimiter, refreshToken);
+app.post('/api/auth/logout', authLimiter, logout);
 
 describe('Authentication session API', () => {
   it('returns 401 when no HttpOnly refresh cookie is provided', async () => {
