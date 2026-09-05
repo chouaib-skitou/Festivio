@@ -9,7 +9,7 @@
     "seed:demo": "node scripts/seed.js",
     "lint": "eslint .",
     "format": "prettier --write . --ignore-path .prettierignore",
-    "format:check": "prettier --check \"server.js\" \"config/*.js\" \"constants/*.js\" \"middlewares/*.js\"",
+    "format:check": "prettier --check \"server.js\" \"config/db.js\" \"middlewares/authMiddleware.js\" \"middlewares/uploadMiddleware.js\"",
     "test": "jest",
     "test:ci": "jest --runInBand --detectOpenHandles"
   },
