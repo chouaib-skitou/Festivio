@@ -4,6 +4,11 @@ const Event = require('../models/Event');
 const User = require('../models/User');
 const TaskDTO = require('../dtos/TaskDTO');
 const { ROLES } = require('../constants/roles');
+const {
+  buildPaginationMeta,
+  getPaginationParams,
+  getSearchRegex,
+} = require('../utils/pagination');
 
 const OBJECT_ID_PATTERN = /^[0-9a-fA-F]{24}$/;
 const TASK_STATUSES = new Set(['Pending', 'In Progress', 'Completed']);
@@ -31,6 +36,67 @@ const loadManagedEvent = async (eventId, user) => {
     return { status: 403, message: 'You cannot manage tasks for this event' };
   }
   return { event };
+};
+
+const getTaskSort = (sort = 'newest') => {
+  const options = {
+    newest: { createdAt: -1 },
+    oldest: { createdAt: 1 },
+    status: { status: 1, createdAt: -1 },
+  };
+  return options[sort] || options.newest;
+};
+
+const buildRoleScopedTaskConditions = async (user) => {
+  if (user.role === ROLES.ORGANIZER) {
+    return [{ assignedTo: toObjectId(user.userId) }];
+  }
+
+  if (user.role === ROLES.ORGANIZER_ADMIN) {
+    const organizerId = toObjectId(user.userId);
+    if (!organizerId) {
+      const error = new Error('Invalid authenticated user');
+      error.status = 401;
+      throw error;
+    }
+
+    const managedEvents = await Event.find({ organizer: organizerId }).select('_id');
+    if (managedEvents.length === 0) return [{ _id: null }];
+
+    return [
+      {
+        $or: managedEvents.map((event) => ({ event: event._id })),
+      },
+    ];
+  }
+
+  if (user.role === ROLES.ADMIN) return [];
+
+  const error = new Error('Tasks are not available for this role');
+  error.status = 403;
+  throw error;
+};
+
+const buildTaskFilter = async (req) => {
+  const conditions = await buildRoleScopedTaskConditions(req.user);
+
+  if (req.query.status && req.query.status !== 'All') {
+    if (!TASK_STATUSES.has(req.query.status)) {
+      const error = new Error('Invalid task status');
+      error.status = 400;
+      throw error;
+    }
+    conditions.push({ status: req.query.status });
+  }
+
+  const searchRegex = getSearchRegex(req.query.search);
+  if (searchRegex) {
+    conditions.push({
+      $or: [{ title: searchRegex }, { description: searchRegex }],
+    });
+  }
+
+  return conditions.length > 0 ? { $and: conditions } : {};
 };
 
 exports.createTask = async (req, res) => {
@@ -88,29 +154,37 @@ exports.createTask = async (req, res) => {
 
 exports.getAllTasks = async (req, res) => {
   try {
-    let filter = {};
-    if (req.user.role === ROLES.ORGANIZER) {
-      filter = { assignedTo: toObjectId(req.user.userId) };
-    } else if (req.user.role === ROLES.ORGANIZER_ADMIN) {
-      const organizerId = toObjectId(req.user.userId);
-      if (!organizerId) {
-        return res.status(401).json({ message: 'Invalid authenticated user' });
-      }
-      const eventIds = await Event.find({ organizer: organizerId }).distinct('_id');
-      filter = { event: { $in: eventIds } };
-    } else if (req.user.role !== ROLES.ADMIN) {
-      return res
-        .status(403)
-        .json({ message: 'Tasks are not available for this role' });
-    }
+    const { page, limit, skip } = getPaginationParams(req.query, {
+      defaultLimit: 10,
+      maxLimit: 50,
+    });
+    const filter = await buildTaskFilter(req);
+    const sort = getTaskSort(req.query.sort);
 
-    const tasks = await Task.find(filter)
-      .populate('assignedTo', 'firstName lastName email role')
-      .sort({ createdAt: -1 });
-    return res.json({ tasks: tasks.map((task) => new TaskDTO(task)) });
+    const [tasks, total] = await Promise.all([
+      Task.find(filter)
+        .populate('assignedTo', 'firstName lastName email role')
+        .populate('event', 'name date isOnline')
+        .sort(sort)
+        .skip(skip)
+        .limit(limit),
+      Task.countDocuments(filter),
+    ]);
+
+    return res.json({
+      tasks: tasks.map((task) => new TaskDTO(task)),
+      pagination: buildPaginationMeta({ page, limit, total }),
+      filters: {
+        search: req.query.search || '',
+        sort: req.query.sort || 'newest',
+        status: req.query.status || 'All',
+      },
+    });
   } catch (error) {
     console.error('Task listing failed:', error.message);
-    return res.status(500).json({ message: 'Unable to fetch tasks' });
+    return res
+      .status(error.status || 500)
+      .json({ message: error.status ? error.message : 'Unable to fetch tasks' });
   }
 };
 
