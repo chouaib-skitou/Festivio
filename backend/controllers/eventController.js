@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const axios = require('axios');
 const Event = require('../models/Event');
 const EventDTO = require('../dtos/EventDTO');
@@ -69,11 +70,6 @@ const buildEventFilter = (req) => {
   return filter;
 };
 
-const trustedServerFilterOptions = {
-  sanitizeFilter: false,
-  strictQuery: true,
-};
-
 exports.createEvent = async (req, res) => {
   try {
     const { name, description, date, participants, isOnline, zoomLink } = req.body;
@@ -113,18 +109,17 @@ exports.getEvents = async (req, res) => {
       defaultLimit: 9,
       maxLimit: 30,
     });
-    const filter = buildEventFilter(req);
+    const filter = mongoose.trusted(buildEventFilter(req));
     const sort = getEventSort(req.query.sort);
 
     const [events, total] = await Promise.all([
       Event.find(filter)
-        .setOptions(trustedServerFilterOptions)
         .populate('participants', 'firstName lastName email role')
         .populate('tasks')
         .sort(sort)
         .skip(skip)
         .limit(limit),
-      Event.countDocuments(filter).setOptions(trustedServerFilterOptions),
+      Event.countDocuments(filter),
     ]);
 
     return res.json({
