@@ -17,22 +17,38 @@ const toObjectId = (value) => {
   return new mongoose.Types.ObjectId(value);
 };
 
+const sameId = (left, right) => left?.toString() === right?.toString();
+
 const canManageEvent = (event, user) =>
   user.role === ROLES.ADMIN ||
-  (user.role === ROLES.ORGANIZER_ADMIN &&
-    event.organizer.toString() === user.userId);
+  (user.role === ROLES.ORGANIZER_ADMIN && sameId(event.organizer, user.userId));
+
+const findEventBySafeId = async (safeEventId) => {
+  const events = await Event.find();
+  return events.find((event) => sameId(event._id, safeEventId));
+};
 
 const loadManagedEvent = async (eventId, user) => {
   const safeEventId =
     eventId instanceof mongoose.Types.ObjectId ? eventId : toObjectId(eventId);
   if (!safeEventId) return { status: 400, message: 'Invalid event id' };
 
-  const event = await Event.findById(safeEventId);
+  const event = await findEventBySafeId(safeEventId);
   if (!event) return { status: 404, message: 'Event not found' };
   if (!canManageEvent(event, user)) {
     return { status: 403, message: 'You cannot manage tasks for this event' };
   }
   return { event };
+};
+
+const findOrganizerBySafeId = async (safeUserId) => {
+  const organizers = await User.find({ role: ROLES.ORGANIZER });
+  return organizers.find((user) => sameId(user._id, safeUserId));
+};
+
+const findTaskBySafeId = async (safeTaskId) => {
+  const tasks = await Task.find();
+  return tasks.find((task) => sameId(task._id, safeTaskId));
 };
 
 const dateValue = (value) => new Date(value || 0).getTime();
@@ -64,9 +80,7 @@ const loadVisibleTasks = async (user) => {
     }
 
     const tasks = await query;
-    return tasks.filter(
-      (task) => task.assignedTo?._id?.toString() === organizerId.toString()
-    );
+    return tasks.filter((task) => sameId(task.assignedTo?._id, organizerId));
   }
 
   if (user.role === ROLES.ORGANIZER_ADMIN) {
@@ -78,9 +92,7 @@ const loadVisibleTasks = async (user) => {
     }
 
     const tasks = await query;
-    return tasks.filter(
-      (task) => task.event?.organizer?.toString() === organizerId.toString()
-    );
+    return tasks.filter((task) => sameId(task.event?.organizer, organizerId));
   }
 
   const error = new Error('Tasks are not available for this role');
@@ -133,8 +145,8 @@ exports.createTask = async (req, res) => {
         .json({ message: eventResult.message });
     }
 
-    const assignee = await User.findById(safeAssigneeId);
-    if (!assignee || assignee.role !== ROLES.ORGANIZER) {
+    const assignee = await findOrganizerBySafeId(safeAssigneeId);
+    if (!assignee) {
       return res
         .status(400)
         .json({ message: 'Tasks can only be assigned to organizers' });
@@ -201,11 +213,11 @@ const updateTask = async (req, res) => {
     const safeTaskId = toObjectId(req.params.id);
     if (!safeTaskId) return res.status(400).json({ message: 'Invalid task id' });
 
-    const task = await Task.findById(safeTaskId);
+    const task = await findTaskBySafeId(safeTaskId);
     if (!task) return res.status(404).json({ message: 'Task not found' });
 
     if (req.user.role === ROLES.ORGANIZER) {
-      if (task.assignedTo.toString() !== req.user.userId) {
+      if (!sameId(task.assignedTo, req.user.userId)) {
         return res
           .status(403)
           .json({ message: 'You can only update your assigned tasks' });
@@ -243,8 +255,8 @@ const updateTask = async (req, res) => {
         if (!safeAssigneeId) {
           return res.status(400).json({ message: 'Invalid assignee id' });
         }
-        const assignee = await User.findById(safeAssigneeId);
-        if (!assignee || assignee.role !== ROLES.ORGANIZER) {
+        const assignee = await findOrganizerBySafeId(safeAssigneeId);
+        if (!assignee) {
           return res
             .status(400)
             .json({ message: 'Tasks can only be assigned to organizers' });
@@ -272,7 +284,7 @@ exports.deleteTask = async (req, res) => {
     const safeTaskId = toObjectId(req.params.id);
     if (!safeTaskId) return res.status(400).json({ message: 'Invalid task id' });
 
-    const task = await Task.findById(safeTaskId);
+    const task = await findTaskBySafeId(safeTaskId);
     if (!task) return res.status(404).json({ message: 'Task not found' });
     const eventResult = await loadManagedEvent(task.event, req.user);
     if (!eventResult.event) {
@@ -283,7 +295,7 @@ exports.deleteTask = async (req, res) => {
 
     await task.deleteOne();
     eventResult.event.tasks = eventResult.event.tasks.filter(
-      (taskId) => taskId.toString() !== task._id.toString()
+      (taskId) => !sameId(taskId, task._id)
     );
     await eventResult.event.save();
     return res.json({ message: 'Task deleted successfully' });
