@@ -12,10 +12,6 @@ const {
 
 const OBJECT_ID_PATTERN = /^[0-9a-fA-F]{24}$/;
 const TASK_STATUSES = new Set(['Pending', 'In Progress', 'Completed']);
-const trustedServerFilterOptions = {
-  sanitizeFilter: false,
-  strictQuery: true,
-};
 
 const toObjectId = (value) => {
   if (typeof value !== 'string' || !OBJECT_ID_PATTERN.test(value)) return null;
@@ -160,18 +156,17 @@ exports.getAllTasks = async (req, res) => {
       defaultLimit: 10,
       maxLimit: 50,
     });
-    const filter = await buildTaskFilter(req);
+    const filter = mongoose.trusted(await buildTaskFilter(req));
     const sort = getTaskSort(req.query.sort);
 
     const [tasks, total] = await Promise.all([
       Task.find(filter)
-        .setOptions(trustedServerFilterOptions)
         .populate('assignedTo', 'firstName lastName email role')
         .populate('event', 'name date isOnline')
         .sort(sort)
         .skip(skip)
         .limit(limit),
-      Task.countDocuments(filter).setOptions(trustedServerFilterOptions),
+      Task.countDocuments(filter),
     ]);
 
     return res.json({
