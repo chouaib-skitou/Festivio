@@ -308,7 +308,7 @@ const seed = async () => {
 
     console.info('Festivio realistic demo dataset seeded.');
     console.info(`Created ${demoUsers.length} users, ${events.length} events and ${taskCount} tasks.`);
-    console.info(`Shared demo password: ${demoPassword}`);
+    console.info('Demo accounts use the configured DEMO_PASSWORD value.');
     console.info('Primary accounts:');
     console.info('  admin@festivio.local       (ROLE_ADMIN)');
     console.info('  manager@festivio.local     (ROLE_ORGANIZER_ADMIN)');
