@@ -8,6 +8,10 @@ const ResetPasswordRequest = require('../models/ResetPasswordRequest');
 const UserDTO = require('../dtos/UserDTO');
 const { config } = require('../config/env');
 const { ROLES, PUBLIC_REGISTRATION_ROLES } = require('../constants/roles');
+const {
+  buildPasswordResetEmail,
+  buildVerificationEmail,
+} = require('../services/emailTemplates');
 
 const REFRESH_COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -82,7 +86,7 @@ const createTransporter = () => {
   return null;
 };
 
-const sendEmail = async (to, subject, html) => {
+const sendEmail = async (to, subject, email) => {
   const transporter = createTransporter();
   if (!transporter) {
     if (config.isProduction) {
@@ -96,7 +100,8 @@ const sendEmail = async (to, subject, html) => {
     from: config.emailFrom,
     to,
     subject,
-    html,
+    html: email.html,
+    text: email.text,
   });
 };
 
@@ -151,7 +156,10 @@ exports.register = async (req, res) => {
     await sendEmail(
       normalizedEmail,
       'Verify your Festivio account',
-      `<p>Welcome to Festivio.</p><p><a href="${verificationLink}">Verify your email address</a>.</p>`
+      buildVerificationEmail({
+        firstName: user.firstName,
+        verificationLink,
+      })
     );
 
     return res.status(201).json({
@@ -287,7 +295,10 @@ exports.requestPasswordReset = async (req, res) => {
     await sendEmail(
       user.email,
       'Reset your Festivio password',
-      `<p>A password reset was requested for your Festivio account.</p><p><a href="${resetLink}">Reset your password</a>. This link expires in one hour.</p>`
+      buildPasswordResetEmail({
+        firstName: user.firstName,
+        resetLink,
+      })
     );
 
     return res.json(genericResponse);

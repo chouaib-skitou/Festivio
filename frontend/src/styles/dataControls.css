@@ -1,0 +1,68 @@
+.task-toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.task-toolbar input,
+.task-toolbar select,
+.task-card select {
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  outline: none;
+  transition: border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.task-toolbar input:focus,
+.task-toolbar select:focus,
+.task-card select:focus {
+  border-color: rgba(138, 135, 255, .48);
+  box-shadow: 0 0 0 3px rgba(111, 108, 246, .1);
+  background: var(--app-surface-strong);
+}
+
+.task-toolbar input {
+  flex: 1 1 240px;
+}
+
+.task-toolbar select {
+  flex: 0 1 180px;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 24px;
+  color: var(--app-muted);
+  font-size: .86rem;
+}
+
+.pagination-controls span {
+  min-width: 180px;
+  text-align: center;
+}
+
+.pagination-controls .secondary-button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 650px) {
+  .task-toolbar,
+  .pagination-controls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .task-toolbar input,
+  .task-toolbar select,
+  .pagination-controls span {
+    width: 100%;
+  }
+}

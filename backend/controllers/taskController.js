@@ -4,6 +4,10 @@ const Event = require('../models/Event');
 const User = require('../models/User');
 const TaskDTO = require('../dtos/TaskDTO');
 const { ROLES } = require('../constants/roles');
+const {
+  buildPaginationMeta,
+  getPaginationParams,
+} = require('../utils/pagination');
 
 const OBJECT_ID_PATTERN = /^[0-9a-fA-F]{24}$/;
 const TASK_STATUSES = new Set(['Pending', 'In Progress', 'Completed']);
@@ -13,24 +17,108 @@ const toObjectId = (value) => {
   return new mongoose.Types.ObjectId(value);
 };
 
+const sameId = (left, right) => left?.toString() === right?.toString();
+
 const canManageEvent = (event, user) =>
   user.role === ROLES.ADMIN ||
-  (user.role === ROLES.ORGANIZER_ADMIN &&
-    event.organizer.toString() === user.userId);
+  (user.role === ROLES.ORGANIZER_ADMIN && sameId(event.organizer, user.userId));
+
+const findEventBySafeId = async (safeEventId) => {
+  const events = await Event.find();
+  return events.find((event) => sameId(event._id, safeEventId));
+};
 
 const loadManagedEvent = async (eventId, user) => {
   const safeEventId =
     eventId instanceof mongoose.Types.ObjectId ? eventId : toObjectId(eventId);
   if (!safeEventId) return { status: 400, message: 'Invalid event id' };
 
-  const event = await Event.findOne({
-    _id: { $eq: safeEventId },
-  }).setOptions({ sanitizeFilter: true, strictQuery: true });
+  const event = await findEventBySafeId(safeEventId);
   if (!event) return { status: 404, message: 'Event not found' };
   if (!canManageEvent(event, user)) {
     return { status: 403, message: 'You cannot manage tasks for this event' };
   }
   return { event };
+};
+
+const findOrganizerBySafeId = async (safeUserId) => {
+  const organizers = await User.find({ role: ROLES.ORGANIZER });
+  return organizers.find((user) => sameId(user._id, safeUserId));
+};
+
+const findTaskBySafeId = async (safeTaskId) => {
+  const tasks = await Task.find();
+  return tasks.find((task) => sameId(task._id, safeTaskId));
+};
+
+const dateValue = (value) => new Date(value || 0).getTime();
+
+const getTaskComparator = (sort = 'newest') => {
+  const comparators = {
+    newest: (left, right) => dateValue(right.createdAt) - dateValue(left.createdAt),
+    oldest: (left, right) => dateValue(left.createdAt) - dateValue(right.createdAt),
+    status: (left, right) =>
+      String(left.status || '').localeCompare(String(right.status || '')) ||
+      dateValue(right.createdAt) - dateValue(left.createdAt),
+  };
+  return comparators[sort] || comparators.newest;
+};
+
+const loadVisibleTasks = async (user) => {
+  const query = Task.find()
+    .populate('assignedTo', 'firstName lastName email role')
+    .populate('event', 'name date isOnline organizer');
+
+  if (user.role === ROLES.ADMIN) return query;
+
+  if (user.role === ROLES.ORGANIZER) {
+    const organizerId = toObjectId(user.userId);
+    if (!organizerId) {
+      const error = new Error('Invalid authenticated user');
+      error.status = 401;
+      throw error;
+    }
+
+    const tasks = await query;
+    return tasks.filter((task) => sameId(task.assignedTo?._id, organizerId));
+  }
+
+  if (user.role === ROLES.ORGANIZER_ADMIN) {
+    const organizerId = toObjectId(user.userId);
+    if (!organizerId) {
+      const error = new Error('Invalid authenticated user');
+      error.status = 401;
+      throw error;
+    }
+
+    const tasks = await query;
+    return tasks.filter((task) => sameId(task.event?.organizer, organizerId));
+  }
+
+  const error = new Error('Tasks are not available for this role');
+  error.status = 403;
+  throw error;
+};
+
+const taskMatchesStatus = (task, status) => {
+  if (!status || status === 'All') return true;
+  if (!TASK_STATUSES.has(status)) {
+    const error = new Error('Invalid task status');
+    error.status = 400;
+    throw error;
+  }
+  return task.status === status;
+};
+
+const taskMatchesSearch = (task, search) => {
+  const normalizedSearch = String(search || '').trim().toLowerCase();
+  if (!normalizedSearch) return true;
+
+  const eventName = typeof task.event === 'object' ? task.event?.name : '';
+  const assignee = task.assignedTo || {};
+  const assigneeName = `${assignee.firstName || ''} ${assignee.lastName || ''}`;
+  const haystack = `${task.title || ''} ${task.description || ''} ${eventName || ''} ${assigneeName} ${assignee.email || ''}`.toLowerCase();
+  return haystack.includes(normalizedSearch);
 };
 
 exports.createTask = async (req, res) => {
@@ -57,8 +145,8 @@ exports.createTask = async (req, res) => {
         .json({ message: eventResult.message });
     }
 
-    const assignee = await User.findById(safeAssigneeId);
-    if (!assignee || assignee.role !== ROLES.ORGANIZER) {
+    const assignee = await findOrganizerBySafeId(safeAssigneeId);
+    if (!assignee) {
       return res
         .status(400)
         .json({ message: 'Tasks can only be assigned to organizers' });
@@ -88,29 +176,35 @@ exports.createTask = async (req, res) => {
 
 exports.getAllTasks = async (req, res) => {
   try {
-    let filter = {};
-    if (req.user.role === ROLES.ORGANIZER) {
-      filter = { assignedTo: toObjectId(req.user.userId) };
-    } else if (req.user.role === ROLES.ORGANIZER_ADMIN) {
-      const organizerId = toObjectId(req.user.userId);
-      if (!organizerId) {
-        return res.status(401).json({ message: 'Invalid authenticated user' });
-      }
-      const eventIds = await Event.find({ organizer: organizerId }).distinct('_id');
-      filter = { event: { $in: eventIds } };
-    } else if (req.user.role !== ROLES.ADMIN) {
-      return res
-        .status(403)
-        .json({ message: 'Tasks are not available for this role' });
-    }
+    const { page, limit, skip } = getPaginationParams(req.query, {
+      defaultLimit: 10,
+      maxLimit: 50,
+    });
+    const sort = req.query.sort || 'newest';
+    const status = req.query.status || 'All';
 
-    const tasks = await Task.find(filter)
-      .populate('assignedTo', 'firstName lastName email role')
-      .sort({ createdAt: -1 });
-    return res.json({ tasks: tasks.map((task) => new TaskDTO(task)) });
+    const visibleTasks = await loadVisibleTasks(req.user);
+    const filteredTasks = visibleTasks
+      .filter((task) => taskMatchesStatus(task, status))
+      .filter((task) => taskMatchesSearch(task, req.query.search))
+      .sort(getTaskComparator(sort));
+
+    const paginatedTasks = filteredTasks.slice(skip, skip + limit);
+
+    return res.json({
+      tasks: paginatedTasks.map((task) => new TaskDTO(task)),
+      pagination: buildPaginationMeta({ page, limit, total: filteredTasks.length }),
+      filters: {
+        search: req.query.search || '',
+        sort,
+        status,
+      },
+    });
   } catch (error) {
     console.error('Task listing failed:', error.message);
-    return res.status(500).json({ message: 'Unable to fetch tasks' });
+    return res
+      .status(error.status || 500)
+      .json({ message: error.status ? error.message : 'Unable to fetch tasks' });
   }
 };
 
@@ -119,11 +213,11 @@ const updateTask = async (req, res) => {
     const safeTaskId = toObjectId(req.params.id);
     if (!safeTaskId) return res.status(400).json({ message: 'Invalid task id' });
 
-    const task = await Task.findById(safeTaskId);
+    const task = await findTaskBySafeId(safeTaskId);
     if (!task) return res.status(404).json({ message: 'Task not found' });
 
     if (req.user.role === ROLES.ORGANIZER) {
-      if (task.assignedTo.toString() !== req.user.userId) {
+      if (!sameId(task.assignedTo, req.user.userId)) {
         return res
           .status(403)
           .json({ message: 'You can only update your assigned tasks' });
@@ -161,8 +255,8 @@ const updateTask = async (req, res) => {
         if (!safeAssigneeId) {
           return res.status(400).json({ message: 'Invalid assignee id' });
         }
-        const assignee = await User.findById(safeAssigneeId);
-        if (!assignee || assignee.role !== ROLES.ORGANIZER) {
+        const assignee = await findOrganizerBySafeId(safeAssigneeId);
+        if (!assignee) {
           return res
             .status(400)
             .json({ message: 'Tasks can only be assigned to organizers' });
@@ -190,7 +284,7 @@ exports.deleteTask = async (req, res) => {
     const safeTaskId = toObjectId(req.params.id);
     if (!safeTaskId) return res.status(400).json({ message: 'Invalid task id' });
 
-    const task = await Task.findById(safeTaskId);
+    const task = await findTaskBySafeId(safeTaskId);
     if (!task) return res.status(404).json({ message: 'Task not found' });
     const eventResult = await loadManagedEvent(task.event, req.user);
     if (!eventResult.event) {
@@ -201,7 +295,7 @@ exports.deleteTask = async (req, res) => {
 
     await task.deleteOne();
     eventResult.event.tasks = eventResult.event.tasks.filter(
-      (taskId) => taskId.toString() !== task._id.toString()
+      (taskId) => !sameId(taskId, task._id)
     );
     await eventResult.event.save();
     return res.json({ message: 'Task deleted successfully' });
