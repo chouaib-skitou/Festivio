@@ -3,6 +3,11 @@ const Event = require('../models/Event');
 const EventDTO = require('../dtos/EventDTO');
 const { config } = require('../config/env');
 const { ROLES } = require('../constants/roles');
+const {
+  buildPaginationMeta,
+  getPaginationParams,
+  getSearchRegex,
+} = require('../utils/pagination');
 
 const uploadImage = async (file) => {
   if (!file) return null;
@@ -26,6 +31,43 @@ const canManageEvent = (event, user) =>
   user.role === ROLES.ADMIN ||
   (user.role === ROLES.ORGANIZER_ADMIN &&
     event.organizer.toString() === user.userId);
+
+const getEventSort = (sort = 'date_asc') => {
+  const options = {
+    date_asc: { date: 1, createdAt: -1 },
+    date_desc: { date: -1, createdAt: -1 },
+    newest: { createdAt: -1 },
+    oldest: { createdAt: 1 },
+  };
+  return options[sort] || options.date_asc;
+};
+
+const buildEventFilter = (req) => {
+  const filter =
+    req.user.role === ROLES.ORGANIZER_ADMIN
+      ? { organizer: req.user.userId }
+      : {};
+
+  const searchRegex = getSearchRegex(req.query.search);
+  if (searchRegex) {
+    filter.$or = [{ name: searchRegex }, { description: searchRegex }];
+  }
+
+  if (req.query.type === 'online') {
+    filter.isOnline = true;
+  } else if (req.query.type === 'in_person') {
+    filter.isOnline = false;
+  }
+
+  const now = new Date();
+  if (req.query.timeframe === 'upcoming') {
+    filter.date = { $gte: now };
+  } else if (req.query.timeframe === 'past') {
+    filter.date = { $lt: now };
+  }
+
+  return filter;
+};
 
 exports.createEvent = async (req, res) => {
   try {
@@ -62,15 +104,33 @@ exports.createEvent = async (req, res) => {
 
 exports.getEvents = async (req, res) => {
   try {
-    const filter =
-      req.user.role === ROLES.ORGANIZER_ADMIN
-        ? { organizer: req.user.userId }
-        : {};
-    const events = await Event.find(filter)
-      .populate('participants', 'firstName lastName email role')
-      .populate('tasks')
-      .sort({ date: 1 });
-    return res.json({ events: events.map((event) => new EventDTO(event)) });
+    const { page, limit, skip } = getPaginationParams(req.query, {
+      defaultLimit: 9,
+      maxLimit: 30,
+    });
+    const filter = buildEventFilter(req);
+    const sort = getEventSort(req.query.sort);
+
+    const [events, total] = await Promise.all([
+      Event.find(filter)
+        .populate('participants', 'firstName lastName email role')
+        .populate('tasks')
+        .sort(sort)
+        .skip(skip)
+        .limit(limit),
+      Event.countDocuments(filter),
+    ]);
+
+    return res.json({
+      events: events.map((event) => new EventDTO(event)),
+      pagination: buildPaginationMeta({ page, limit, total }),
+      filters: {
+        search: req.query.search || '',
+        sort: req.query.sort || 'date_asc',
+        timeframe: req.query.timeframe || 'all',
+        type: req.query.type || 'all',
+      },
+    });
   } catch (error) {
     console.error('Event listing failed:', error.message);
     return res.status(500).json({ message: 'Unable to fetch events' });
