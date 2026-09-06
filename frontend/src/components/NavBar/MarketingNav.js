@@ -22,7 +22,6 @@ const MarketingNav = ({ open, setOpen }) => {
         <div className={`navbar-links marketing-links ${open ? 'open' : ''}`}>
           <a href="/#features" onClick={close}>Features</a>
           <a href="/#workflow" onClick={close}>How it works</a>
-          <Link to="/services" className={active('/services')} onClick={close}>Platform</Link>
           {accessToken ? (
             <Link to="/home" className="nav-cta" onClick={close}>Open workspace <ArrowRight size={16} /></Link>
           ) : (
