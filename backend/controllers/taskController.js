@@ -7,7 +7,6 @@ const { ROLES } = require('../constants/roles');
 const {
   buildPaginationMeta,
   getPaginationParams,
-  getSearchRegex,
 } = require('../utils/pagination');
 
 const OBJECT_ID_PATTERN = /^[0-9a-fA-F]{24}$/;
@@ -36,18 +35,38 @@ const loadManagedEvent = async (eventId, user) => {
   return { event };
 };
 
-const getTaskSort = (sort = 'newest') => {
-  const options = {
-    newest: { createdAt: -1 },
-    oldest: { createdAt: 1 },
-    status: { status: 1, createdAt: -1 },
+const dateValue = (value) => new Date(value || 0).getTime();
+
+const getTaskComparator = (sort = 'newest') => {
+  const comparators = {
+    newest: (left, right) => dateValue(right.createdAt) - dateValue(left.createdAt),
+    oldest: (left, right) => dateValue(left.createdAt) - dateValue(right.createdAt),
+    status: (left, right) =>
+      String(left.status || '').localeCompare(String(right.status || '')) ||
+      dateValue(right.createdAt) - dateValue(left.createdAt),
   };
-  return options[sort] || options.newest;
+  return comparators[sort] || comparators.newest;
 };
 
-const buildRoleScopedTaskConditions = async (user) => {
+const loadVisibleTasks = async (user) => {
+  const query = Task.find()
+    .populate('assignedTo', 'firstName lastName email role')
+    .populate('event', 'name date isOnline organizer');
+
+  if (user.role === ROLES.ADMIN) return query;
+
   if (user.role === ROLES.ORGANIZER) {
-    return [{ assignedTo: toObjectId(user.userId) }];
+    const organizerId = toObjectId(user.userId);
+    if (!organizerId) {
+      const error = new Error('Invalid authenticated user');
+      error.status = 401;
+      throw error;
+    }
+
+    const tasks = await query;
+    return tasks.filter(
+      (task) => task.assignedTo?._id?.toString() === organizerId.toString()
+    );
   }
 
   if (user.role === ROLES.ORGANIZER_ADMIN) {
@@ -58,43 +77,36 @@ const buildRoleScopedTaskConditions = async (user) => {
       throw error;
     }
 
-    const managedEvents = await Event.find({ organizer: organizerId }).select('_id');
-    if (managedEvents.length === 0) return [{ _id: null }];
-
-    return [
-      {
-        $or: managedEvents.map((event) => ({ event: event._id })),
-      },
-    ];
+    const tasks = await query;
+    return tasks.filter(
+      (task) => task.event?.organizer?.toString() === organizerId.toString()
+    );
   }
-
-  if (user.role === ROLES.ADMIN) return [];
 
   const error = new Error('Tasks are not available for this role');
   error.status = 403;
   throw error;
 };
 
-const buildTaskFilter = async (req) => {
-  const conditions = await buildRoleScopedTaskConditions(req.user);
-
-  if (req.query.status && req.query.status !== 'All') {
-    if (!TASK_STATUSES.has(req.query.status)) {
-      const error = new Error('Invalid task status');
-      error.status = 400;
-      throw error;
-    }
-    conditions.push({ status: req.query.status });
+const taskMatchesStatus = (task, status) => {
+  if (!status || status === 'All') return true;
+  if (!TASK_STATUSES.has(status)) {
+    const error = new Error('Invalid task status');
+    error.status = 400;
+    throw error;
   }
+  return task.status === status;
+};
 
-  const searchRegex = getSearchRegex(req.query.search);
-  if (searchRegex) {
-    conditions.push({
-      $or: [{ title: searchRegex }, { description: searchRegex }],
-    });
-  }
+const taskMatchesSearch = (task, search) => {
+  const normalizedSearch = String(search || '').trim().toLowerCase();
+  if (!normalizedSearch) return true;
 
-  return conditions.length > 0 ? { $and: conditions } : {};
+  const eventName = typeof task.event === 'object' ? task.event?.name : '';
+  const assignee = task.assignedTo || {};
+  const assigneeName = `${assignee.firstName || ''} ${assignee.lastName || ''}`;
+  const haystack = `${task.title || ''} ${task.description || ''} ${eventName || ''} ${assigneeName} ${assignee.email || ''}`.toLowerCase();
+  return haystack.includes(normalizedSearch);
 };
 
 exports.createTask = async (req, res) => {
@@ -156,26 +168,24 @@ exports.getAllTasks = async (req, res) => {
       defaultLimit: 10,
       maxLimit: 50,
     });
-    const filter = mongoose.trusted(await buildTaskFilter(req));
-    const sort = getTaskSort(req.query.sort);
+    const sort = req.query.sort || 'newest';
+    const status = req.query.status || 'All';
 
-    const [tasks, total] = await Promise.all([
-      Task.find(filter)
-        .populate('assignedTo', 'firstName lastName email role')
-        .populate('event', 'name date isOnline')
-        .sort(sort)
-        .skip(skip)
-        .limit(limit),
-      Task.countDocuments(filter),
-    ]);
+    const visibleTasks = await loadVisibleTasks(req.user);
+    const filteredTasks = visibleTasks
+      .filter((task) => taskMatchesStatus(task, status))
+      .filter((task) => taskMatchesSearch(task, req.query.search))
+      .sort(getTaskComparator(sort));
+
+    const paginatedTasks = filteredTasks.slice(skip, skip + limit);
 
     return res.json({
-      tasks: tasks.map((task) => new TaskDTO(task)),
-      pagination: buildPaginationMeta({ page, limit, total }),
+      tasks: paginatedTasks.map((task) => new TaskDTO(task)),
+      pagination: buildPaginationMeta({ page, limit, total: filteredTasks.length }),
       filters: {
         search: req.query.search || '',
-        sort: req.query.sort || 'newest',
-        status: req.query.status || 'All',
+        sort,
+        status,
       },
     });
   } catch (error) {
