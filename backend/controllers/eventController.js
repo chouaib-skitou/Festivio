@@ -1,4 +1,3 @@
-const mongoose = require('mongoose');
 const axios = require('axios');
 const Event = require('../models/Event');
 const EventDTO = require('../dtos/EventDTO');
@@ -7,7 +6,6 @@ const { ROLES } = require('../constants/roles');
 const {
   buildPaginationMeta,
   getPaginationParams,
-  getSearchRegex,
 } = require('../utils/pagination');
 
 const uploadImage = async (file) => {
@@ -33,26 +31,27 @@ const canManageEvent = (event, user) =>
   (user.role === ROLES.ORGANIZER_ADMIN &&
     event.organizer.toString() === user.userId);
 
-const getEventSort = (sort = 'date_asc') => {
-  const options = {
-    date_asc: { date: 1, createdAt: -1 },
-    date_desc: { date: -1, createdAt: -1 },
-    newest: { createdAt: -1 },
-    oldest: { createdAt: 1 },
+const dateValue = (value) => new Date(value || 0).getTime();
+
+const getEventComparator = (sort = 'date_asc') => {
+  const comparators = {
+    date_asc: (left, right) =>
+      dateValue(left.date) - dateValue(right.date) ||
+      dateValue(right.createdAt) - dateValue(left.createdAt),
+    date_desc: (left, right) =>
+      dateValue(right.date) - dateValue(left.date) ||
+      dateValue(right.createdAt) - dateValue(left.createdAt),
+    newest: (left, right) => dateValue(right.createdAt) - dateValue(left.createdAt),
+    oldest: (left, right) => dateValue(left.createdAt) - dateValue(right.createdAt),
   };
-  return options[sort] || options.date_asc;
+  return comparators[sort] || comparators.date_asc;
 };
 
-const buildEventFilter = (req) => {
+const buildBaseEventFilter = (req) => {
   const filter =
     req.user.role === ROLES.ORGANIZER_ADMIN
       ? { organizer: req.user.userId }
       : {};
-
-  const searchRegex = getSearchRegex(req.query.search);
-  if (searchRegex) {
-    filter.$or = [{ name: searchRegex }, { description: searchRegex }];
-  }
 
   if (req.query.type === 'online') {
     filter.isOnline = true;
@@ -60,14 +59,24 @@ const buildEventFilter = (req) => {
     filter.isOnline = false;
   }
 
-  const now = new Date();
-  if (req.query.timeframe === 'upcoming') {
-    filter.date = { $gte: now };
-  } else if (req.query.timeframe === 'past') {
-    filter.date = { $lt: now };
-  }
-
   return filter;
+};
+
+const eventMatchesSearch = (event, search) => {
+  const normalizedSearch = String(search || '').trim().toLowerCase();
+  if (!normalizedSearch) return true;
+
+  const haystack = `${event.name || ''} ${event.description || ''}`.toLowerCase();
+  return haystack.includes(normalizedSearch);
+};
+
+const eventMatchesTimeframe = (event, timeframe) => {
+  const eventDate = dateValue(event.date);
+  const now = Date.now();
+
+  if (timeframe === 'upcoming') return eventDate >= now;
+  if (timeframe === 'past') return eventDate < now;
+  return true;
 };
 
 exports.createEvent = async (req, res) => {
@@ -109,26 +118,28 @@ exports.getEvents = async (req, res) => {
       defaultLimit: 9,
       maxLimit: 30,
     });
-    const filter = mongoose.trusted(buildEventFilter(req));
-    const sort = getEventSort(req.query.sort);
+    const baseFilter = buildBaseEventFilter(req);
+    const sort = req.query.sort || 'date_asc';
+    const timeframe = req.query.timeframe || 'all';
 
-    const [events, total] = await Promise.all([
-      Event.find(filter)
-        .populate('participants', 'firstName lastName email role')
-        .populate('tasks')
-        .sort(sort)
-        .skip(skip)
-        .limit(limit),
-      Event.countDocuments(filter),
-    ]);
+    const allEvents = await Event.find(baseFilter)
+      .populate('participants', 'firstName lastName email role')
+      .populate('tasks');
+
+    const filteredEvents = allEvents
+      .filter((event) => eventMatchesSearch(event, req.query.search))
+      .filter((event) => eventMatchesTimeframe(event, timeframe))
+      .sort(getEventComparator(sort));
+
+    const paginatedEvents = filteredEvents.slice(skip, skip + limit);
 
     return res.json({
-      events: events.map((event) => new EventDTO(event)),
-      pagination: buildPaginationMeta({ page, limit, total }),
+      events: paginatedEvents.map((event) => new EventDTO(event)),
+      pagination: buildPaginationMeta({ page, limit, total: filteredEvents.length }),
       filters: {
         search: req.query.search || '',
-        sort: req.query.sort || 'date_asc',
-        timeframe: req.query.timeframe || 'all',
+        sort,
+        timeframe,
         type: req.query.type || 'all',
       },
     });
