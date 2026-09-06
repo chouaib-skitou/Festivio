@@ -4,6 +4,7 @@ import './styles/tokens.css';
 import './index.css';
 import './styles/public.css';
 import './styles/glass.css';
+import './styles/dataControls.css';
 import App from './App';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));

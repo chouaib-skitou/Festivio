@@ -3,6 +3,10 @@ const Event = require('../models/Event');
 const EventDTO = require('../dtos/EventDTO');
 const { config } = require('../config/env');
 const { ROLES } = require('../constants/roles');
+const {
+  buildPaginationMeta,
+  getPaginationParams,
+} = require('../utils/pagination');
 
 const uploadImage = async (file) => {
   if (!file) return null;
@@ -26,6 +30,54 @@ const canManageEvent = (event, user) =>
   user.role === ROLES.ADMIN ||
   (user.role === ROLES.ORGANIZER_ADMIN &&
     event.organizer.toString() === user.userId);
+
+const dateValue = (value) => new Date(value || 0).getTime();
+
+const getEventComparator = (sort = 'date_asc') => {
+  const comparators = {
+    date_asc: (left, right) =>
+      dateValue(left.date) - dateValue(right.date) ||
+      dateValue(right.createdAt) - dateValue(left.createdAt),
+    date_desc: (left, right) =>
+      dateValue(right.date) - dateValue(left.date) ||
+      dateValue(right.createdAt) - dateValue(left.createdAt),
+    newest: (left, right) => dateValue(right.createdAt) - dateValue(left.createdAt),
+    oldest: (left, right) => dateValue(left.createdAt) - dateValue(right.createdAt),
+  };
+  return comparators[sort] || comparators.date_asc;
+};
+
+const buildBaseEventFilter = (req) => {
+  const filter =
+    req.user.role === ROLES.ORGANIZER_ADMIN
+      ? { organizer: req.user.userId }
+      : {};
+
+  if (req.query.type === 'online') {
+    filter.isOnline = true;
+  } else if (req.query.type === 'in_person') {
+    filter.isOnline = false;
+  }
+
+  return filter;
+};
+
+const eventMatchesSearch = (event, search) => {
+  const normalizedSearch = String(search || '').trim().toLowerCase();
+  if (!normalizedSearch) return true;
+
+  const haystack = `${event.name || ''} ${event.description || ''}`.toLowerCase();
+  return haystack.includes(normalizedSearch);
+};
+
+const eventMatchesTimeframe = (event, timeframe) => {
+  const eventDate = dateValue(event.date);
+  const now = Date.now();
+
+  if (timeframe === 'upcoming') return eventDate >= now;
+  if (timeframe === 'past') return eventDate < now;
+  return true;
+};
 
 exports.createEvent = async (req, res) => {
   try {
@@ -62,15 +114,35 @@ exports.createEvent = async (req, res) => {
 
 exports.getEvents = async (req, res) => {
   try {
-    const filter =
-      req.user.role === ROLES.ORGANIZER_ADMIN
-        ? { organizer: req.user.userId }
-        : {};
-    const events = await Event.find(filter)
+    const { page, limit, skip } = getPaginationParams(req.query, {
+      defaultLimit: 9,
+      maxLimit: 30,
+    });
+    const baseFilter = buildBaseEventFilter(req);
+    const sort = req.query.sort || 'date_asc';
+    const timeframe = req.query.timeframe || 'all';
+
+    const allEvents = await Event.find(baseFilter)
       .populate('participants', 'firstName lastName email role')
-      .populate('tasks')
-      .sort({ date: 1 });
-    return res.json({ events: events.map((event) => new EventDTO(event)) });
+      .populate('tasks');
+
+    const filteredEvents = allEvents
+      .filter((event) => eventMatchesSearch(event, req.query.search))
+      .filter((event) => eventMatchesTimeframe(event, timeframe))
+      .sort(getEventComparator(sort));
+
+    const paginatedEvents = filteredEvents.slice(skip, skip + limit);
+
+    return res.json({
+      events: paginatedEvents.map((event) => new EventDTO(event)),
+      pagination: buildPaginationMeta({ page, limit, total: filteredEvents.length }),
+      filters: {
+        search: req.query.search || '',
+        sort,
+        timeframe,
+        type: req.query.type || 'all',
+      },
+    });
   } catch (error) {
     console.error('Event listing failed:', error.message);
     return res.status(500).json({ message: 'Unable to fetch events' });

@@ -20,7 +20,7 @@ const taskRoutes = require('./routes/taskRoutes');
 const app = express();
 
 app.disable('x-powered-by');
-app.set('trust proxy', config.isProduction ? 1 : false);
+app.set('trust proxy', config.trustProxy);
 
 app.use((req, res, next) => {
   const requestId = req.get('x-request-id') || crypto.randomUUID();

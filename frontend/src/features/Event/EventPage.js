@@ -8,6 +8,15 @@ import useAuthStore from '../../stores/authStore';
 const participantId = (participant) =>
   typeof participant === 'string' ? participant : participant?._id || participant?.id;
 
+const defaultPagination = {
+  page: 1,
+  limit: 9,
+  total: 0,
+  totalPages: 1,
+  hasNextPage: false,
+  hasPreviousPage: false,
+};
+
 const EventPage = () => {
   const user = useAuthStore((state) => state.user);
   const [events, setEvents] = useState([]);
@@ -17,11 +26,26 @@ const EventPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [confirmationModal, setConfirmationModal] = useState({ isOpen: false, eventId: null });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [timeframeFilter, setTimeframeFilter] = useState('upcoming');
+  const [sortOrder, setSortOrder] = useState('date_asc');
+  const [pagination, setPagination] = useState(defaultPagination);
   const navigate = useNavigate();
 
-  const fetchEvents = async () => {
+  const fetchEvents = async (nextPage = pagination.page) => {
+    setIsLoading(true);
     try {
-      const response = await axiosInstance.get('/api/events');
+      const params = new URLSearchParams({
+        page: String(nextPage),
+        limit: String(pagination.limit || 9),
+        sort: sortOrder,
+      });
+      if (searchTerm.trim()) params.set('search', searchTerm.trim());
+      if (typeFilter !== 'all') params.set('type', typeFilter);
+      if (timeframeFilter !== 'all') params.set('timeframe', timeframeFilter);
+
+      const response = await axiosInstance.get(`/api/events?${params.toString()}`);
       const nextEvents = (response.data.events || []).map((event) => ({
         ...event,
         isParticipating: (event.participants || []).some(
@@ -29,33 +53,32 @@ const EventPage = () => {
         ),
       }));
       setEvents(nextEvents);
+      setPagination(response.data.pagination || defaultPagination);
       setError('');
     } catch (_error) {
       setError('Unable to load events right now.');
+      setEvents([]);
+      setPagination(defaultPagination);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchEvents();
+    fetchEvents(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  }, [user?.id, searchTerm, typeFilter, timeframeFilter, sortOrder]);
 
   const handleParticipate = async (eventId) => {
     await axiosInstance.post(`/api/events/${eventId}/participate`);
-    setEvents((current) => current.map((event) =>
-      event.id === eventId ? { ...event, isParticipating: true } : event
-    ));
+    await fetchEvents(pagination.page);
   };
 
   const confirmUnparticipate = async () => {
     const eventId = confirmationModal.eventId;
     try {
       await axiosInstance.post(`/api/events/${eventId}/unparticipate`);
-      setEvents((current) => current.map((event) =>
-        event.id === eventId ? { ...event, isParticipating: false } : event
-      ));
+      await fetchEvents(pagination.page);
     } finally {
       setConfirmationModal({ isOpen: false, eventId: null });
     }
@@ -80,12 +103,12 @@ const EventPage = () => {
 
     await axiosInstance.post('/api/events', formData);
     closeModal();
-    await fetchEvents();
+    await fetchEvents(1);
   };
 
   const canCreateEvent = ['ROLE_ADMIN', 'ROLE_ORGANIZER_ADMIN'].includes(user?.role);
 
-  if (isLoading) return <main className="private-shell"><p>Loading events…</p></main>;
+  if (isLoading && events.length === 0) return <main className="private-shell"><p>Loading events…</p></main>;
 
   return (
     <main className="private-shell">
@@ -102,10 +125,35 @@ const EventPage = () => {
         )}
       </div>
 
+      <div className="task-toolbar" aria-label="Event filters">
+        <input
+          type="search"
+          placeholder="Search events"
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
+        />
+        <select value={timeframeFilter} onChange={(event) => setTimeframeFilter(event.target.value)}>
+          <option value="upcoming">Upcoming</option>
+          <option value="past">Past</option>
+          <option value="all">All dates</option>
+        </select>
+        <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
+          <option value="all">All formats</option>
+          <option value="online">Online</option>
+          <option value="in_person">In person</option>
+        </select>
+        <select value={sortOrder} onChange={(event) => setSortOrder(event.target.value)}>
+          <option value="date_asc">Soonest first</option>
+          <option value="date_desc">Latest date first</option>
+          <option value="newest">Newest created</option>
+          <option value="oldest">Oldest created</option>
+        </select>
+      </div>
+
       {error && <div className="inline-alert">{error}</div>}
 
-      <section className="event-grid">
-        {events.length === 0 && <div className="empty-state">No events yet.</div>}
+      <section className="event-grid" aria-busy={isLoading}>
+        {events.length === 0 && <div className="empty-state">No events match this view.</div>}
         {events.map((event) => (
           <article className="event-card" key={event.id}>
             <button className="event-card-main" onClick={() => navigate(`/events/${event.id}`)}>
@@ -132,6 +180,26 @@ const EventPage = () => {
           </article>
         ))}
       </section>
+
+      <div className="pagination-controls" aria-label="Events pagination">
+        <button
+          className="secondary-button"
+          disabled={!pagination.hasPreviousPage || isLoading}
+          onClick={() => fetchEvents(pagination.page - 1)}
+        >
+          Previous
+        </button>
+        <span>
+          Page {pagination.page} / {pagination.totalPages} · {pagination.total} events
+        </span>
+        <button
+          className="secondary-button"
+          disabled={!pagination.hasNextPage || isLoading}
+          onClick={() => fetchEvents(pagination.page + 1)}
+        >
+          Next
+        </button>
+      </div>
 
       {isModalOpen && (
         <div className="modal-overlay" role="presentation">
