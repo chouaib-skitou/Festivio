@@ -1,1 +1,126 @@
-.platform-page { min-height: 100vh; padding-top: 72px; color: #e8edf7; background: #070c18; }.platform-hero { padding: 110px 0 72px; text-align: center; background: radial-gradient(circle at 50% 0,rgba(99,102,241,.17),transparent 44%); }.platform-hero .marketing-container { max-width: 780px; }.platform-hero h1 { margin: 8px 0 18px; font-size: clamp(2.7rem,6vw,5rem); letter-spacing: -.055em; }.platform-hero p { color: #98a5b9; line-height: 1.75; }.role-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; padding-bottom: 100px; }.role-grid article { padding: 32px; border-radius: 22px; border: 1px solid rgba(148,163,184,.13); background: #0c1424; }.role-grid article > span { width: 44px; height: 44px; display: grid; place-items: center; color: #c7d2fe; background: rgba(99,102,241,.13); border-radius: 14px; }.role-grid h2 { margin: 20px 0 10px; font-size: 1.25rem; }.role-grid p { margin: 0; color: #8794a8; line-height: 1.7; }.platform-cta { padding: 60px 0; border-top: 1px solid rgba(148,163,184,.1); background: #0a101d; }.platform-cta .marketing-container { display: flex; justify-content: space-between; align-items: center; gap: 30px; }.platform-cta h2 { margin: 0 0 8px; font-size: 2rem; }.platform-cta p { margin: 0; color: #8794a8; }@media(max-width:700px){.role-grid{grid-template-columns:1fr}.platform-cta .marketing-container{align-items:flex-start;flex-direction:column}}
+.platform-page {
+  min-height: 100vh;
+  padding-top: var(--header-height);
+  color: var(--marketing-text);
+  background:
+    radial-gradient(circle at 16% 7%, rgba(126, 123, 255, .12), transparent 28%),
+    radial-gradient(circle at 88% 9%, rgba(83, 166, 255, .1), transparent 26%),
+    var(--marketing-bg);
+}
+
+.platform-hero {
+  padding: 104px 0 66px;
+  text-align: center;
+}
+
+.platform-hero .marketing-container {
+  max-width: 790px;
+}
+
+.platform-hero h1 {
+  margin: 12px 0 18px;
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 6vw, 5.4rem);
+  line-height: .98;
+  letter-spacing: -.065em;
+  font-weight: 660;
+}
+
+.platform-hero p:last-child {
+  margin: 0 auto;
+  max-width: 680px;
+  color: var(--marketing-muted);
+  line-height: 1.75;
+}
+
+.role-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  padding-bottom: 92px;
+}
+
+.role-grid article {
+  padding: 30px;
+  border: 1px solid var(--marketing-border);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, .66);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(14px);
+  transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.role-grid article:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+.role-grid article > span {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: #fff;
+  background: #111317;
+}
+
+.role-grid h2 {
+  margin: 22px 0 10px;
+  color: #17191d;
+  font-size: 1.14rem;
+  letter-spacing: -.025em;
+}
+
+.role-grid p {
+  margin: 0;
+  color: var(--marketing-muted);
+  line-height: 1.72;
+}
+
+.platform-cta {
+  padding: 34px 0 92px;
+}
+
+.platform-cta .marketing-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 34px;
+  padding: 42px;
+  border: 1px solid var(--marketing-border);
+  border-radius: 28px;
+  background: rgba(255,255,255,.74);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(16px);
+}
+
+.platform-cta h2 {
+  margin: 0 0 8px;
+  color: #111317;
+  font-size: clamp(1.8rem, 3vw, 2.8rem);
+  letter-spacing: -.045em;
+}
+
+.platform-cta p {
+  margin: 0;
+  color: var(--marketing-muted);
+}
+
+.platform-cta .primary-button {
+  flex: 0 0 auto;
+  color: #fff;
+  background: #111317;
+  box-shadow: 0 14px 34px rgba(17,19,23,.14);
+}
+
+.platform-cta .primary-button:hover {
+  background: #000;
+}
+
+@media(max-width:700px){
+  .platform-hero { padding-top: 82px; }
+  .role-grid{grid-template-columns:1fr}
+  .platform-cta .marketing-container{align-items:flex-start;flex-direction:column;padding:30px 24px}
+  .platform-cta .primary-button{width:100%}
+}
