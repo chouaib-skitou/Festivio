@@ -1,3 +1,42 @@
+# [1.3.0](https://github.com/chouaib-skitou/Festivio/compare/v1.2.0...v1.3.0) (2026-09-06)
+
+
+### Bug Fixes
+
+* **api:** avoid Mongo operators in event listing ([5d08999](https://github.com/chouaib-skitou/Festivio/commit/5d089996716eb60814da8a0d7804e02ccedebb5e))
+* **api:** avoid Mongo operators in task listing ([26b4d0a](https://github.com/chouaib-skitou/Festivio/commit/26b4d0a0000eb2325ecb53d4bd07f58f44a621a7))
+* **api:** avoid tainted query objects in task controller ([b120ce4](https://github.com/chouaib-skitou/Festivio/commit/b120ce4f0aefad91ffd853acc565fcce7f458d5e))
+* **api:** configure trusted proxy depth ([15339c5](https://github.com/chouaib-skitou/Festivio/commit/15339c5001e456735f8d0a8ccea16fcd3a8520f6))
+* **api:** expose event format fields ([2b51a9e](https://github.com/chouaib-skitou/Festivio/commit/2b51a9e88f6d334157a7c32f861878decb1d2838))
+* **api:** harden search regex escaping ([9a48ea4](https://github.com/chouaib-skitou/Festivio/commit/9a48ea487b48d480db7680929539ff209628378d))
+* **api:** keep sanitizeFilter enabled for event listings ([67c1e2d](https://github.com/chouaib-skitou/Festivio/commit/67c1e2d4df9c85b234a6b1efba6d5b12556861e7))
+* **api:** keep sanitizeFilter enabled for task listings ([927b1bc](https://github.com/chouaib-skitou/Festivio/commit/927b1bcb81e50c63a04cc9b66aa89b0f2adbd95c))
+* **api:** remove unused regex search helper ([e25a506](https://github.com/chouaib-skitou/Festivio/commit/e25a506001937018eb87ea74607f87732ce67a63))
+* **api:** trust server-built event filters ([ce44f86](https://github.com/chouaib-skitou/Festivio/commit/ce44f8618d6f181245336ea8b73b311726941edc))
+* **api:** trust server-built task filters ([235dce0](https://github.com/chouaib-skitou/Festivio/commit/235dce02bb444c361e3a8878732761dcbd0d02fa))
+* **api:** use configured trust proxy setting ([fae7b60](https://github.com/chouaib-skitou/Festivio/commit/fae7b603c35f83aa0b1f60d8af98d1460f399655))
+* **docker:** trust local frontend proxy ([ac74af0](https://github.com/chouaib-skitou/Festivio/commit/ac74af00195f140599e59d951169f0c9be0a66fb))
+* **seed:** avoid logging demo password ([ed38319](https://github.com/chouaib-skitou/Festivio/commit/ed383191df6a22845d5e6504a54c164f88d561f2))
+* **seed:** inline realistic demo dataset ([a39e5ff](https://github.com/chouaib-skitou/Festivio/commit/a39e5ff9cb00cbd6b6790b5594c093ae85ebcf89))
+* **seed:** remove $in filters from demo seed ([2b665b1](https://github.com/chouaib-skitou/Festivio/commit/2b665b18e20cc2c2e1b070c9d95166046e1a741a))
+
+
+### Features
+
+* **api:** add paginated searchable events endpoint ([cc42755](https://github.com/chouaib-skitou/Festivio/commit/cc4275528441851d34a6d123bfb4290f55ec15fc))
+* **api:** add paginated searchable tasks endpoint ([5c6f1d5](https://github.com/chouaib-skitou/Festivio/commit/5c6f1d52df87a4a0146478e3c4a1110b08eeb740))
+* **api:** add pagination query helpers ([89cc263](https://github.com/chouaib-skitou/Festivio/commit/89cc2639eed652996aa8787075a6ed1b3f5a608e))
+* **api:** add route-specific rate limiters ([9ae503e](https://github.com/chouaib-skitou/Festivio/commit/9ae503e0c4d0b5983c7bc8c750d94e66084da0f7))
+* **api:** apply event route rate limits ([74d0c94](https://github.com/chouaib-skitou/Festivio/commit/74d0c94780ba9b9d86774d1f33de69df125afcb9))
+* **api:** apply task route rate limits ([040701c](https://github.com/chouaib-skitou/Festivio/commit/040701c817ae2c3130ec5f24e9b7ab5fd425cd5f))
+* **email:** add branded transactional templates ([bd0ee73](https://github.com/chouaib-skitou/Festivio/commit/bd0ee73043f69904806ea17b8655eba5736860e6))
+* **email:** use branded auth email templates ([7d0c672](https://github.com/chouaib-skitou/Festivio/commit/7d0c67280fb3f8c89e216c19b3f3fbda8171d230))
+* **frontend:** add server-driven event search and pagination ([c19b48b](https://github.com/chouaib-skitou/Festivio/commit/c19b48b730380d772c5df5c3e39e56241af0425e))
+* **frontend:** add server-driven task search and pagination ([9d0da08](https://github.com/chouaib-skitou/Festivio/commit/9d0da087fba8a76dec1c0d843e815b241a824e6d))
+* **frontend:** add shared data control styles ([0767aad](https://github.com/chouaib-skitou/Festivio/commit/0767aadf004650079401c8f4f64c4f703efb5310))
+* **frontend:** load shared data control styles ([ebc7098](https://github.com/chouaib-skitou/Festivio/commit/ebc7098aed777cdd96726f25442f1f52c7ce04aa))
+* **seed:** load complete realistic demo dataset ([e276b26](https://github.com/chouaib-skitou/Festivio/commit/e276b2653a0dc54cf159fbe7b1173af2de5f12aa))
+
 # [1.2.0](https://github.com/chouaib-skitou/Festivio/compare/v1.1.0...v1.2.0) (2026-09-06)
 
 
