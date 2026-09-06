@@ -12,6 +12,10 @@ const {
 
 const OBJECT_ID_PATTERN = /^[0-9a-fA-F]{24}$/;
 const TASK_STATUSES = new Set(['Pending', 'In Progress', 'Completed']);
+const trustedServerFilterOptions = {
+  sanitizeFilter: false,
+  strictQuery: true,
+};
 
 const toObjectId = (value) => {
   if (typeof value !== 'string' || !OBJECT_ID_PATTERN.test(value)) return null;
@@ -28,9 +32,7 @@ const loadManagedEvent = async (eventId, user) => {
     eventId instanceof mongoose.Types.ObjectId ? eventId : toObjectId(eventId);
   if (!safeEventId) return { status: 400, message: 'Invalid event id' };
 
-  const event = await Event.findOne({
-    _id: { $eq: safeEventId },
-  }).setOptions({ sanitizeFilter: true, strictQuery: true });
+  const event = await Event.findById(safeEventId);
   if (!event) return { status: 404, message: 'Event not found' };
   if (!canManageEvent(event, user)) {
     return { status: 403, message: 'You cannot manage tasks for this event' };
@@ -163,12 +165,13 @@ exports.getAllTasks = async (req, res) => {
 
     const [tasks, total] = await Promise.all([
       Task.find(filter)
+        .setOptions(trustedServerFilterOptions)
         .populate('assignedTo', 'firstName lastName email role')
         .populate('event', 'name date isOnline')
         .sort(sort)
         .skip(skip)
         .limit(limit),
-      Task.countDocuments(filter),
+      Task.countDocuments(filter).setOptions(trustedServerFilterOptions),
     ]);
 
     return res.json({
