@@ -69,6 +69,11 @@ const buildEventFilter = (req) => {
   return filter;
 };
 
+const trustedServerFilterOptions = {
+  sanitizeFilter: false,
+  strictQuery: true,
+};
+
 exports.createEvent = async (req, res) => {
   try {
     const { name, description, date, participants, isOnline, zoomLink } = req.body;
@@ -113,12 +118,13 @@ exports.getEvents = async (req, res) => {
 
     const [events, total] = await Promise.all([
       Event.find(filter)
+        .setOptions(trustedServerFilterOptions)
         .populate('participants', 'firstName lastName email role')
         .populate('tasks')
         .sort(sort)
         .skip(skip)
         .limit(limit),
-      Event.countDocuments(filter),
+      Event.countDocuments(filter).setOptions(trustedServerFilterOptions),
     ]);
 
     return res.json({
