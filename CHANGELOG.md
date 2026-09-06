@@ -1,3 +1,15 @@
+# [1.2.0](https://github.com/chouaib-skitou/Festivio/compare/v1.1.0...v1.2.0) (2026-09-06)
+
+
+### Bug Fixes
+
+* **frontend:** restore mobile burger dropdown ([c78262a](https://github.com/chouaib-skitou/Festivio/commit/c78262acc0d33981594b77bd7a948820a93834f7))
+
+
+### Features
+
+* **frontend:** add Festivio favicon ([53d35b3](https://github.com/chouaib-skitou/Festivio/commit/53d35b34487532050b258c5edd433eb4b92c5409))
+
 # [1.1.0](https://github.com/chouaib-skitou/Festivio/compare/v1.0.0...v1.1.0) (2026-09-06)
 
 
