@@ -1,3 +1,15 @@
+# [1.1.0](https://github.com/chouaib-skitou/Festivio/compare/v1.0.0...v1.1.0) (2026-09-06)
+
+
+### Features
+
+* **frontend:** add marketing navigation shell ([57893e3](https://github.com/chouaib-skitou/Festivio/commit/57893e3f7bdb403f94ca5782f7b8e97d15d6c22f))
+* **frontend:** add shared brand component ([30d1018](https://github.com/chouaib-skitou/Festivio/commit/30d101877ef4f73e23ae4ef7b2d0b90af748520c))
+* **frontend:** add shared design tokens ([8019f8e](https://github.com/chouaib-skitou/Festivio/commit/8019f8e0dcc61c66611bd6c98b14a8ca969ce7e8))
+* **frontend:** add workspace navigation shell ([7dcb6b8](https://github.com/chouaib-skitou/Festivio/commit/7dcb6b821e3847227e3e38715b19d516e9c95137))
+* **frontend:** redesign marketing landing experience ([d29a2c3](https://github.com/chouaib-skitou/Festivio/commit/d29a2c39d4e788e627db124c71a4f173f405c5ca))
+* **frontend:** redesign workspace overview ([ad3c23a](https://github.com/chouaib-skitou/Festivio/commit/ad3c23a5ff5f477f47c5043b343345a4bc73a94d))
+
 # 1.0.0 (2026-09-05)
 
 
