@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import useAuthStore from '../../stores/authStore';
 import NavBar from './NavBar';
@@ -20,6 +20,26 @@ test('renders website navigation on public routes', () => {
   expect(screen.getByRole('navigation', { name: /website navigation/i })).toBeInTheDocument();
   expect(screen.getByRole('link', { name: /sign in/i })).toHaveAttribute('href', '/login');
   expect(screen.getByRole('link', { name: /get started/i })).toHaveAttribute('href', '/register');
+});
+
+test('toggles the website mobile navigation from the burger button', () => {
+  renderAt('/');
+
+  const toggle = screen.getByRole('button', { name: /toggle website navigation/i });
+  const links = screen.getByRole('link', { name: /features/i }).closest('.navbar-links');
+
+  expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  expect(links).not.toHaveClass('open');
+
+  fireEvent.click(toggle);
+
+  expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  expect(links).toHaveClass('open');
+
+  fireEvent.click(toggle);
+
+  expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  expect(links).not.toHaveClass('open');
 });
 
 test('offers the workspace from the website when authenticated', () => {

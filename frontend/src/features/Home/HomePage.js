@@ -99,7 +99,7 @@ const HomePage = () => {
       <footer className="marketing-footer">
         <div className="marketing-container footer-layout">
           <div className="footer-brand"><span className="preview-mini-brand">F</span><div><strong>Festivio</strong><p>Event planning and team coordination.</p></div></div>
-          <div className="footer-links"><a href="#features">Features</a><a href="#workflow">How it works</a><Link to="/services">Platform</Link>{accessToken ? <Link to="/home">Workspace</Link> : <Link to="/login">Sign in</Link>}</div>
+          <div className="footer-links"><a href="#features">Features</a><a href="#workflow">How it works</a>{accessToken ? <Link to="/home">Workspace</Link> : <Link to="/login">Sign in</Link>}</div>
           <p>© {new Date().getFullYear()} Festivio. Open-source software.</p>
         </div>
       </footer>
