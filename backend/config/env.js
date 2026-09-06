@@ -17,7 +17,19 @@ const parseBoolean = (value, fallback) => {
   return value.toLowerCase() === 'true';
 };
 
+const parseTrustProxy = (value, fallback) => {
+  if (value === undefined) return fallback;
+
+  const normalized = value.trim().toLowerCase();
+  if (['false', '0', 'off', 'none'].includes(normalized)) return false;
+  if (['true', '1', 'on'].includes(normalized)) return 1;
+
+  const parsed = Number.parseInt(normalized, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+};
+
 const nodeEnv = process.env.NODE_ENV || process.env.ENV || 'development';
+const isProduction = nodeEnv === 'production';
 const port = parseInteger(process.env.PORT, 5000);
 const frontendUrl = stripTrailingSlash(
   process.env.FRONTEND_URL || 'http://localhost:3000'
@@ -32,7 +44,7 @@ const corsOrigins = (process.env.CORS_ORIGINS || frontendUrl)
 
 const config = Object.freeze({
   nodeEnv,
-  isProduction: nodeEnv === 'production',
+  isProduction,
   port,
   mongoUri: process.env.MONGO_URI,
   mongoServerSelectionTimeoutMs: parseInteger(
@@ -52,6 +64,7 @@ const config = Object.freeze({
   accessTokenTtl: process.env.ACCESS_TOKEN_TTL || '15m',
   refreshTokenTtl: process.env.REFRESH_TOKEN_TTL || '30d',
   refreshCookieName: process.env.REFRESH_COOKIE_NAME || 'festivio_refresh',
+  trustProxy: parseTrustProxy(process.env.TRUST_PROXY, isProduction ? 1 : false),
   frontendUrl,
   backendUrl,
   corsOrigins,
